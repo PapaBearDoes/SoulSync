@@ -564,3 +564,44 @@ def test_my_account_hands_over_the_icon(client, monkeypatch):
     assert client.get('/api/profiles/me/oidc').get_json()['icon'] == 'https://cdn.example.test/pocket-id.png'
     _config(monkeypatch, **{'security.oidc_icon_url': 'javascript:alert(1)'})
     assert client.get('/api/profiles/me/oidc').get_json()['icon'] == ''
+
+
+# -- what a new oidc profile starts with (signup_defaults) --
+
+def _pages_of(profile):
+    pages = profile['allowed_pages']
+    return json.loads(pages) if isinstance(pages, str) else pages
+
+
+def test_a_new_oidc_profile_without_settings_starts_like_a_plex_one():
+    from core.security.signup_defaults import SIGNUP_PAGES
+    db = web_server.get_database()
+    r = oidc_signin.sign_in(db, _acct(), _settings(), allow_create=True, default_can_download=False)
+    p = db.get_profile(r.profile_id)
+    assert set(_pages_of(p)) == set(SIGNUP_PAGES) and p['home_page'] == 'discover'
+    assert p['allowed_sides'] == 'music' and p['request_limit'] == 0
+
+
+def test_a_new_oidc_profile_gets_the_sign_up_access():
+    from core.security.signup_defaults import SIGNUP_PAGES, SIGNUP_VIDEO_PAGES, signup_access
+    db = web_server.get_database()
+    values = {'security.signup_sides': 'both', 'security.signup_request_limit': 5}
+    access = signup_access(lambda k, d=None: values.get(k, d))
+    r = oidc_signin.sign_in(db, _acct(), _settings(), allow_create=True, default_can_download=False,
+                            access=access)
+    p = db.get_profile(r.profile_id)
+    assert p['allowed_sides'] == 'both' and p['request_limit'] == 5 and p['request_limit_days'] == 7
+    assert set(_pages_of(p)) == set(SIGNUP_PAGES + SIGNUP_VIDEO_PAGES)
+    assert not p['is_admin'] and not p['can_download']
+
+
+def test_the_oidc_route_passes_the_sign_up_settings(client, monkeypatch):
+    _config(monkeypatch, **{'security.signup_sides': 'video', 'security.signup_request_limit': 3,
+                            'security.signup_request_limit_days': 30})
+    acct = _stub_provider(monkeypatch)
+    done = _go(client)
+    assert done.status_code == 302 and _last_error(client) is None
+    db = web_server.get_database()
+    p = db.get_profile(db.get_profile_by_oidc_identity(acct.identity)['id'])
+    assert p['allowed_sides'] == 'video' and p['home_page'] == 'video-discover'
+    assert p['request_limit'] == 3 and p['request_limit_days'] == 30

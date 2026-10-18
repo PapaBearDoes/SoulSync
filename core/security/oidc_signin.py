@@ -42,6 +42,7 @@ from urllib.parse import urlencode, urlparse
 
 import requests
 
+from core.security.signup_defaults import SignupAccess, create_signup_profile
 from utils.logging_config import get_logger
 
 logger = get_logger("security.oidc_signin")
@@ -404,15 +405,18 @@ def allowed_in(account: OidcAccount, settings: OidcSettings) -> bool:
 
 
 def sign_in(db, account: OidcAccount, settings: OidcSettings, *,
-            allow_create: bool, default_can_download: bool) -> SignInResult:
-    """map a signed-in oidc account to a soulsync profile (see module doc)"""
+            allow_create: bool, default_can_download: bool,
+            access: Optional[SignupAccess] = None) -> SignInResult:
+    """map a signed-in oidc account to a soulsync profile (see module doc).
+    `access` is what a new profile starts with (signup_defaults.signup_access);
+    without one, the shipped default"""
     with _sign_in_lock:
         return _sign_in(db, account, settings, allow_create=allow_create,
-                        default_can_download=default_can_download)
+                        default_can_download=default_can_download, access=access or SignupAccess())
 
 
 def _sign_in(db, account: OidcAccount, settings: OidcSettings, *,
-             allow_create: bool, default_can_download: bool) -> SignInResult:
+             allow_create: bool, default_can_download: bool, access: SignupAccess) -> SignInResult:
     if not allowed_in(account, settings):
         return SignInResult(error="Your account isn't allowed to use SoulSync. Ask your admin.")
 
@@ -427,7 +431,7 @@ def _sign_in(db, account: OidcAccount, settings: OidcSettings, *,
     if not allow_create:
         return SignInResult(error="Your account isn't linked to a SoulSync profile yet. Ask your admin.")
 
-    profile_id = _create_profile(db, account.username, can_download=default_can_download)
+    profile_id = _create_profile(db, account.username, can_download=default_can_download, access=access)
     if profile_id is None:
         return SignInResult(error="Couldn't create a profile for your account")
     db.set_profile_oidc_identity(profile_id, account.identity)
@@ -449,10 +453,12 @@ def connect_profile(db, profile_id: int, account: OidcAccount) -> SignInResult:
         return SignInResult(profile_id=profile_id)
 
 
-def _create_profile(db, username: str, *, can_download: bool) -> Optional[int]:
+def _create_profile(db, username: str, *, can_download: bool,
+                    access: Optional[SignupAccess] = None) -> Optional[int]:
     """a profile named after the account; a taken name gets a number.
-    starts on the same pages as a plex sign-up"""
-    from core.security.plex_signin import SIGNUP_HOME_PAGE, SIGNUP_PAGES, profile_name_for
+    starts with the same access as any sign-up (signup_defaults)"""
+    from core.security.plex_signin import profile_name_for
+    access = access or SignupAccess()
     base = profile_name_for(username)
     if base == "Plex user":
         base = "OIDC user"
@@ -460,8 +466,7 @@ def _create_profile(db, username: str, *, can_download: bool) -> Optional[int]:
         name = base if n == 0 else f"{base} {n + 1}"
         if db.get_profile_by_name(name):
             continue
-        pid = db.create_profile(name, can_download=can_download,
-                                allowed_pages=list(SIGNUP_PAGES), home_page=SIGNUP_HOME_PAGE)
+        pid = create_signup_profile(db, name, access, can_download=can_download)
         if pid:
             return pid
     return None

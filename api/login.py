@@ -279,6 +279,7 @@ def oidc_signin_callback():
     the browser that started the flow can finish it (state and nonce live in
     its session), and only once"""
     from core.security import oidc_signin
+    from core.security.signup_defaults import signup_access
     flow = oidc_signin.Flow.from_session(session.pop('oidc_flow', None))
     mode = flow.mode if flow else 'signin'
     if request.args.get('error'):
@@ -318,6 +319,7 @@ def oidc_signin_callback():
         database, account, settings,
         allow_create=bool(config_manager.get('security.oidc_signin_auto_create', True)),
         default_can_download=bool(config_manager.get('security.oidc_signin_default_can_download', False)),
+        access=signup_access(config_manager.get),
     )
     if result.error:
         return _oidc_done(result.error)
