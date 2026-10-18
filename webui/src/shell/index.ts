@@ -46,7 +46,7 @@ import {
   openPersonalSettings,
   saveMyAccountToken,
 } from './my-accounts';
-import { initOidcSignIn } from './oidc-signin';
+import { initOidcAdminStatus, initOidcSignIn } from './oidc-signin';
 import {
   closeDownloadOriginsModal,
   deleteSelectedOriginEntries,
@@ -157,6 +157,7 @@ const onReady = () => {
   initWeatherPreviewSettings();
   void initPlexSignIn();
   void initOidcSignIn();
+  initOidcAdminStatus();
 };
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', onReady, { once: true });

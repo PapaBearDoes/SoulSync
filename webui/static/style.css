@@ -66627,6 +66627,48 @@ select.ma-input { appearance: auto; }
 .security-nested-block > .form-group {
     border-radius: 6px;
 }
+/* inside its toggle's row (sign in with oidc): take the full width under the
+   help text, and don't let the row's hover tint wash over the whole block */
+#settings-page .form-group > .security-nested-block {
+    flex: 1 1 100%;
+    margin-top: 4px;
+}
+#settings-page .form-group:has(> .security-nested-block):hover {
+    background: transparent;
+}
+/* the admin's own oidc connection, last row of the block */
+.security-oidc-admin {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.security-oidc-admin-logo {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    flex-shrink: 0;
+    background: #0b0c0f;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(244, 245, 247, 0.7);
+}
+.security-oidc-admin-logo img {
+    width: 22px;
+    height: 22px;
+    object-fit: contain;
+}
+.security-oidc-admin-text {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.74);
+}
+.security-oidc-admin-note {
+    flex-basis: 100%;
+    font-size: 12px;
+    color: #f0b35a;
+}
 .security-locked {
     opacity: 0.5;
 }
