@@ -11,10 +11,13 @@
  * history your stats read (#1293).
  *
  * the admin never gets this, it uses Settings (the sidebar hides the button).
+ * the one exception is the sign-in card: an admin who connects oidc from
+ * Settings comes back here to see how it went.
  *
  * Backend: GET /api/profiles/me/connections, the per-service save/OAuth
  * routes, POST /api/profiles/me/connections/<service>/disconnect, and the
- * media-server routes the old My Settings used.
+ * media-server routes the old My Settings used, and GET/DELETE
+ * /api/profiles/me/oidc for the sign-in card.
  */
 
 import { escapeHtml, toast } from './html';
@@ -88,6 +91,16 @@ interface MaConnections {
   listening?: { scope?: string; sources?: string[] };
 }
 
+interface OidcStatus {
+  enabled?: boolean;
+  label?: string;
+  connected?: boolean;
+  /** how the connect that just came back went, handed over once */
+  last?: { connected?: boolean; error?: string | null } | null;
+}
+
+export const OIDC_CONNECT_URL = '/api/profiles/me/oidc-connect/start';
+
 interface ImportStatus {
   own_account?: boolean;
   running?: boolean;
@@ -134,10 +147,11 @@ const SERVER_META: Record<ServerModel['type'], { name: string; logo: string }> =
 const _ma: {
   data: MaConnections | null;
   server: ServerModel | null;
+  oidc: OidcStatus | null;
   imports: Partial<Record<'listenbrainz' | 'lastfm', ImportStatus>>;
   open: string | null;
   poll: ReturnType<typeof setTimeout> | null;
-} = { data: null, server: null, imports: {}, open: null, poll: null };
+} = { data: null, server: null, oidc: null, imports: {}, open: null, poll: null };
 
 function _maProfile(): { id: number; name: string; color: string; avatar: string } {
   try {
@@ -241,13 +255,24 @@ async function _maJson<T>(url: string): Promise<T | null> {
 }
 
 async function _maLoad(): Promise<void> {
-  const [data, server] = await Promise.all([
+  const [data, server, oidc] = await Promise.all([
     _maJson<MaConnections>('/api/profiles/me/connections'),
     _maLoadServer(),
+    _maJson<OidcStatus>('/api/profiles/me/oidc'),
   ]);
   _ma.data = data || { connections: {}, is_admin: false };
   _ma.server = server;
+  _ma.oidc = oidc;
   _maRender();
+  const last = oidc?.last;
+  if (last) {
+    if (last.connected)
+      toast(
+        `Connected. You can now ${(oidc?.label || 'sign in with OIDC').toLowerCase()}`,
+        'success',
+      );
+    else toast(last.error || 'Connecting failed. Try again.', 'error');
+  }
   await _maLoadImports();
 }
 
@@ -370,7 +395,7 @@ function _maRender(): void {
   const body = document.getElementById('ma-body');
   if (!body || !_ma.data) return;
   if (_ma.data.is_admin) {
-    body.innerHTML = `<div class="ma-empty">Your accounts are the app's own. They're set up in Settings.</div>`;
+    body.innerHTML = `<div class="ma-empty">Your accounts are the app's own. They're set up in Settings.</div>${_maSignInSection()}`;
     return;
   }
   body.innerHTML = `
@@ -383,10 +408,41 @@ function _maRender(): void {
       <h4 class="ma-section-title" id="ma-services-h">Music services</h4>
       <div class="ma-group">${_MA_SERVICES.map(_maServiceRow).join('')}</div>
     </section>
+    ${_maSignInSection()}
     <p class="ma-foot">The app's own accounts are set up by the admin in Settings. Anything you change here only affects you.</p>`;
   for (const s of ['listenbrainz', 'lastfm'] as const) _maPaintImport(s);
   const focus = body.querySelector<HTMLElement>('.ma-row.is-open input, .ma-row.is-open select');
   focus?.focus();
+}
+
+/** sign in with oidc: connect this profile to your account at the provider,
+ * or stop it signing in. only shown when the admin turned oidc sign-in on */
+export function _maSignInSection(): string {
+  const o = _ma.oidc;
+  if (!o?.enabled) return '';
+  const label = escapeHtml(o.label || 'Sign in with OIDC');
+  const sub = o.connected
+    ? `Connected. You can use "${label}" on the sign-in screen.`
+    : `Not connected. Connect your account to use "${label}".`;
+  const trailing = o.connected
+    ? '<button type="button" class="ma-btn ma-btn-danger" data-ma="oidc-disconnect">Disconnect</button>'
+    : '<button type="button" class="ma-btn ma-btn-outline" data-ma="oidc-connect">Connect</button>';
+  return `
+    <section class="ma-section" aria-labelledby="ma-signin-h">
+      <h4 class="ma-section-title" id="ma-signin-h">Sign-in</h4>
+      <div class="ma-group">
+        <div class="ma-row">
+          <div class="ma-row-main">
+            ${_maLogo('')}
+            <div class="ma-row-text">
+              <div class="ma-row-name">${label}</div>
+              <div class="ma-row-sub">${sub}</div>
+            </div>
+            ${trailing}
+          </div>
+        </div>
+      </div>
+    </section>`;
 }
 
 function _maListeningCard(): string {
@@ -758,6 +814,13 @@ function _maOnClick(e: Event): void {
       break;
     case 'plex-connect':
       void _maPlexConnect(btn);
+      break;
+    case 'oidc-connect':
+      // a page navigation: the provider sends the browser back here after
+      window.location.assign(OIDC_CONNECT_URL);
+      break;
+    case 'oidc-disconnect':
+      void _maServerCall('/api/profiles/me/oidc', 'DELETE', null, 'Disconnected');
       break;
     case 'plex-unlink':
       void _maServerCall(

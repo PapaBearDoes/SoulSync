@@ -212,6 +212,11 @@
                     <span class="login-plex-or">or</span>
                     <button id="login-plex-button" type="button" class="login-plex-button">Sign in with Plex</button>
                 </div>
+                <!-- shown when sign in with oidc is on (webui/src/shell/oidc-signin.ts) -->
+                <div id="login-oidc" class="login-oidc" hidden>
+                    <span class="login-oidc-or">or</span>
+                    <button id="login-oidc-button" type="button" class="login-oidc-button">Sign in with OIDC</button>
+                </div>
                 <p id="login-error" class="launch-pin-error" style="display: none;"></p>
                 <button class="launch-pin-forgot" onclick="showLoginRecovery()">Forgot password?</button>
             </div>
@@ -9613,6 +9618,89 @@
                                                     </label>
                                                 </div>
 
+                                                <div class="form-group">
+                                                    <label class="toggle-label">
+                                                        <input type="checkbox" id="security-oidc-signin">
+                                                        <span>Sign in with OIDC</span>
+                                                    </label>
+                                                    <div class="setting-help-text">
+                                                        Adds a sign-in button for your own identity provider (Pocket ID,
+                                                        Authentik, Authelia, Keycloak or any other OpenID Connect
+                                                        provider). SoulSync never sees passwords. Create a client at the
+                                                        provider with this callback URL:
+                                                        <code id="security-oidc-callback-url">/api/auth/oidc/callback</code>.
+                                                        New OIDC profiles start with the same pages as Plex sign-ups.
+                                                        Accounts are matched by the provider's account id, never by email,
+                                                        and nobody becomes an admin from a provider claim: to sign in as
+                                                        the admin, save these settings, then connect your own account
+                                                        with the button below.
+                                                    </div>
+                                                    <button type="button" class="auth-button" style="margin-top: 8px;"
+                                                        onclick="window.location.assign('/api/profiles/me/oidc-connect/start')">Connect
+                                                        my admin account</button>
+                                                </div>
+                                                <div class="form-group security-nested">
+                                                    <label for="security-oidc-issuer">↳ Issuer URL:</label>
+                                                    <input type="text" id="security-oidc-issuer" placeholder="https://id.example.com"
+                                                        autocomplete="off" style="width: 100%; font-family: monospace; font-size: 12px;">
+                                                </div>
+                                                <div class="form-group security-nested">
+                                                    <label for="security-oidc-client-id">↳ Client ID:</label>
+                                                    <input type="text" id="security-oidc-client-id" autocomplete="off"
+                                                        style="width: 100%; font-family: monospace; font-size: 12px;">
+                                                </div>
+                                                <div class="form-group security-nested">
+                                                    <label for="security-oidc-client-secret">↳ Client secret:</label>
+                                                    <input type="password" id="security-oidc-client-secret" autocomplete="new-password"
+                                                        style="width: 100%; font-family: monospace; font-size: 12px;">
+                                                </div>
+                                                <div class="form-group security-nested">
+                                                    <label for="security-oidc-button-label">↳ Button label:</label>
+                                                    <input type="text" id="security-oidc-button-label" placeholder="Sign in with OIDC"
+                                                        autocomplete="off" maxlength="40" style="width: 100%;">
+                                                </div>
+                                                <div class="form-group security-nested">
+                                                    <label for="security-oidc-required-group">↳ Required group
+                                                        <span style="opacity:0.6">(optional)</span>:</label>
+                                                    <input type="text" id="security-oidc-required-group" autocomplete="off"
+                                                        style="width: 100%; font-family: monospace; font-size: 12px;">
+                                                    <div class="setting-help-text">
+                                                        Only accounts in this group get in. Leave empty to let every
+                                                        account at the provider sign in.
+                                                    </div>
+                                                </div>
+                                                <div class="form-group security-nested">
+                                                    <label for="security-oidc-groups-claim">↳ Groups claim:</label>
+                                                    <input type="text" id="security-oidc-groups-claim" placeholder="groups"
+                                                        autocomplete="off" style="width: 100%; font-family: monospace; font-size: 12px;">
+                                                </div>
+                                                <div class="form-group security-nested">
+                                                    <label for="security-oidc-scopes">↳ Scopes:</label>
+                                                    <input type="text" id="security-oidc-scopes" placeholder="openid profile email"
+                                                        autocomplete="off" style="width: 100%; font-family: monospace; font-size: 12px;">
+                                                    <div class="setting-help-text">
+                                                        Add the scope your provider needs to send groups, if you set a
+                                                        required group (Pocket ID: <code>groups</code>).
+                                                    </div>
+                                                </div>
+                                                <div class="form-group security-nested">
+                                                    <label for="security-oidc-redirect-uri">↳ Callback URL override
+                                                        <span style="opacity:0.6">(optional)</span>:</label>
+                                                    <input type="text" id="security-oidc-redirect-uri" autocomplete="off"
+                                                        style="width: 100%; font-family: monospace; font-size: 12px;">
+                                                    <div class="setting-help-text">
+                                                        Only if your reverse proxy doesn't pass the public address through.
+                                                    </div>
+                                                    <label class="toggle-label" style="margin-top: 8px;">
+                                                        <input type="checkbox" id="security-oidc-signin-auto-create" checked>
+                                                        <span>Let new OIDC users sign up (off: only accounts already
+                                                            connected to a profile can sign in)</span>
+                                                    </label>
+                                                    <label class="toggle-label">
+                                                        <input type="checkbox" id="security-oidc-signin-can-download">
+                                                        <span>New OIDC profiles can download (off: request-only)</span>
+                                                    </label>
+                                                </div>
                                                 <div class="form-group" id="security-signup-defaults">
                                                     <label for="security-signup-sides">New sign-ups start on</label>
                                                     <select id="security-signup-sides" class="form-select">

@@ -76106,6 +76106,56 @@ body.src-modal-open { overflow: hidden; }
     cursor: wait;
 }
 
+/* sign in with oidc on the login screen (webui/src/shell/oidc-signin.ts).
+   same shape as plex's, in the theme accent since the provider is anyone's */
+.login-oidc {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    margin-top: 14px;
+}
+.login-oidc[hidden] {
+    display: none;
+}
+/* with plex's button above it, one "or" is enough */
+.login-plex:not([hidden]) + .login-oidc {
+    margin-top: 10px;
+}
+.login-plex:not([hidden]) + .login-oidc .login-oidc-or {
+    display: none;
+}
+.login-oidc-or {
+    text-align: center;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--white-a40);
+}
+.login-oidc-button {
+    padding: 12px 16px;
+    border-radius: 10px;
+    border: 1px solid rgba(var(--accent-rgb), 0.55);
+    background: rgba(var(--accent-rgb), 0.12);
+    color: rgb(var(--accent-light-rgb));
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+.login-oidc-button:hover:not(:disabled) {
+    background: rgba(var(--accent-rgb), 0.22);
+    border-color: rgba(var(--accent-rgb), 0.85);
+}
+.login-oidc-button:focus-visible {
+    outline: 2px solid rgb(var(--accent-rgb));
+    outline-offset: 2px;
+}
+.login-oidc-button:disabled {
+    opacity: 0.6;
+    cursor: wait;
+}
+
 
 
 /* ── playlists: play, shuffle, queue, sort, add songs, liked (oct 2026) ─────
