@@ -94,6 +94,8 @@ interface MaConnections {
 interface OidcStatus {
   enabled?: boolean;
   label?: string;
+  /** the admin's https logo url, or '' for the plain key icon */
+  icon?: string;
   connected?: boolean;
   /** how the connect that just came back went, handed over once */
   last?: { connected?: boolean; error?: string | null } | null;
@@ -143,6 +145,10 @@ const SERVER_META: Record<ServerModel['type'], { name: string; logo: string }> =
   jellyfin: { name: 'Jellyfin', logo: '/static/img/brands/jellyfin.png' },
   none: { name: 'Media server', logo: '' },
 };
+
+// init.js fires this when the signed-in profile is known or changes (the same
+// name as SHELL_PROFILE_CONTEXT_CHANGED_EVENT; the shell bundle keeps its own copy)
+const PROFILE_CONTEXT_CHANGED_EVENT = 'ss:webui-profile-context-changed';
 
 const _ma: {
   data: MaConnections | null;
@@ -223,13 +229,23 @@ export function openMyAccountsModal(): void {
     modal.focus();
   }
   document.addEventListener('keydown', _maOnKeydown);
+  // opened straight after a page load (back from an oidc connect) this can
+  // beat the shell to knowing who is signed in, so the header redraws when it
+  // finds out instead of staying on "?"
+  window.addEventListener(PROFILE_CONTEXT_CHANGED_EVENT, _maRefreshHeader);
   void _maLoad();
+}
+
+function _maRefreshHeader(): void {
+  const head = document.querySelector('#my-accounts-overlay .ma-head');
+  if (head) head.outerHTML = _maHeader();
 }
 
 export function closeMyAccountsModal(): void {
   const o = document.getElementById('my-accounts-overlay');
   if (o) o.classList.add('hidden');
   document.removeEventListener('keydown', _maOnKeydown);
+  window.removeEventListener(PROFILE_CONTEXT_CHANGED_EVENT, _maRefreshHeader);
   _maStopPoll();
 }
 
@@ -263,6 +279,7 @@ async function _maLoad(): Promise<void> {
   _ma.data = data || { connections: {}, is_admin: false };
   _ma.server = server;
   _ma.oidc = oidc;
+  _maRefreshHeader();
   _maRender();
   const last = oidc?.last;
   if (last) {
@@ -433,7 +450,7 @@ export function _maSignInSection(): string {
       <div class="ma-group">
         <div class="ma-row">
           <div class="ma-row-main">
-            ${_maLogo('')}
+            ${_maSignInLogo(o.icon || '')}
             <div class="ma-row-text">
               <div class="ma-row-name">${label}</div>
               <div class="ma-row-sub">${sub}</div>
@@ -443,6 +460,18 @@ export function _maSignInSection(): string {
         </div>
       </div>
     </section>`;
+}
+
+const _KEY = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="15" r="4"/><path d="M10.8 12.2 20 3M16 7l3 3M14 9l2 2"/></svg>`;
+
+/** the provider's logo when the admin set one, else a plain key. the url is
+ * the admin's, so it is escaped like any other value and only https reaches
+ * here (the server drops anything else) */
+function _maSignInLogo(icon: string): string {
+  if (icon.startsWith('https://')) {
+    return `<span class="ma-logo"><img src="${escapeHtml(icon)}" alt="" onerror="this.style.display='none'"></span>`;
+  }
+  return `<span class="ma-logo ma-logo-key">${_KEY}</span>`;
 }
 
 function _maListeningCard(): string {

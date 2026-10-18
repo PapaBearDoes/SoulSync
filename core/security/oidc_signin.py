@@ -81,6 +81,7 @@ class OidcSettings:
     required_group: str = ""
     button_label: str = DEFAULT_BUTTON_LABEL
     redirect_uri: str = ""
+    icon_url: str = ""
 
 
 def read_settings(config_manager) -> Optional[OidcSettings]:
@@ -101,7 +102,18 @@ def read_settings(config_manager) -> Optional[OidcSettings]:
         required_group=(config_manager.get("security.oidc_required_group", "") or "").strip(),
         button_label=(config_manager.get("security.oidc_button_label", "") or "").strip() or DEFAULT_BUTTON_LABEL,
         redirect_uri=(config_manager.get("security.oidc_redirect_uri", "") or "").strip(),
+        icon_url=safe_icon_url(config_manager.get("security.oidc_icon_url", "") or ""),
     )
+
+
+def safe_icon_url(url: str) -> str:
+    """the admin's logo url, or "" unless it is plain https. it's drawn as an
+    image in my account, so no other scheme gets through"""
+    url = (url or "").strip()
+    parsed = urlparse(url)
+    if parsed.scheme == "https" and parsed.netloc and not any(c in url for c in "\"'<> "):
+        return url
+    return ""
 
 
 def _is_loopback(host: str) -> bool:

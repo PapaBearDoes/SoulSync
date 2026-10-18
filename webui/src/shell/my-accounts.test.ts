@@ -474,4 +474,50 @@ describe('My Account: sign in with oidc', () => {
     await vi.waitFor(() => expect(signIn()).not.toBeNull());
     expect(toasts.join(' ')).toContain('Connected');
   });
+
+  it("shows the admin's logo, or a plain key without one", async () => {
+    mockAccount();
+    mockOidc({
+      enabled: true,
+      label: 'Sign In With Pocket ID',
+      icon: 'https://cdn.example.test/pocket-id.png',
+      connected: true,
+      last: null,
+    });
+    await opened();
+    await vi.waitFor(() => expect(signIn()).not.toBeNull());
+    expect(signIn()!.querySelector('.ma-logo img')!.getAttribute('src')).toBe(
+      'https://cdn.example.test/pocket-id.png',
+    );
+
+    closeMyAccountsModal();
+    mockOidc({
+      enabled: true,
+      label: 'Sign In With Pocket ID',
+      icon: '',
+      connected: true,
+      last: null,
+    });
+    await opened();
+    await vi.waitFor(() => expect(signIn()).not.toBeNull());
+    expect(signIn()!.querySelector('.ma-logo img')).toBeNull();
+    expect(signIn()!.querySelector('.ma-logo-key svg')).not.toBeNull();
+  });
+
+  it('the header catches up when the profile is known after it opened', async () => {
+    window.getCurrentProfileContext = () => null;
+    mockAccount();
+    mockOidc({ enabled: true, label: 'Sign In With Pocket ID', connected: true, last: null });
+    await opened();
+    expect(modal().querySelector('.ma-title')!.textContent).toBe('My Account');
+    window.getCurrentProfileContext = () => ({
+      profileId: 7,
+      isAdmin: false,
+      name: 'Kim',
+      avatarColor: '#6d5ce8',
+      avatarUrl: '',
+    });
+    window.dispatchEvent(new CustomEvent('ss:webui-profile-context-changed'));
+    expect(modal().querySelector('.ma-title')!.textContent).toBe('Kim');
+  });
 });

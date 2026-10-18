@@ -1550,6 +1550,7 @@ def my_oidc_status():
     methods = get_database().profile_sign_in_methods(get_current_profile_id())
     return jsonify({'success': True, 'enabled': settings is not None,
                     'label': settings.button_label if settings else oidc_signin.DEFAULT_BUTTON_LABEL,
+                    'icon': settings.icon_url if settings else '',
                     'connected': methods['oidc'],
                     'last': session.pop('oidc_connect_result', None)})
 

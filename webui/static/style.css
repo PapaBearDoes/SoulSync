@@ -66339,6 +66339,8 @@ body.em-scroll-lock { overflow: hidden; }
     display: flex; align-items: center; justify-content: center;
 }
 .ma-logo img { width: 26px; height: 26px; object-fit: contain; }
+/* sign-in card with no provider logo set */
+.ma-logo-key { color: rgba(244, 245, 247, 0.7); }
 .ma-row-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
 .ma-row-name { font-size: 15px; font-weight: 500; }
 .ma-row-sub { font-size: 13px; line-height: 1.4; color: rgba(244, 245, 247, 0.6); }
@@ -66612,6 +66614,18 @@ select.ma-input { appearance: auto; }
     margin-left: 14px;
     padding-left: 14px;
     border-left: 2px solid var(--white-a08);
+}
+/* several nested rows that belong together (sign in with oidc's provider
+   settings): one rule down the side and one quiet panel, so they read as a
+   single block. the rows inside keep their own hairline separators */
+.security-nested-block {
+    background: var(--white-a02);
+    border-radius: 0 10px 10px 0;
+    padding: 2px 6px 2px 10px;
+    margin-bottom: 8px;
+}
+.security-nested-block > .form-group {
+    border-radius: 6px;
 }
 .security-locked {
     opacity: 0.5;

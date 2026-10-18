@@ -540,3 +540,27 @@ def test_a_failed_connect_reports_to_my_account_not_the_login_screen(client, mon
     assert status['connected'] is False and 'another' in status['last']['error']
     assert _last_error(client) is None
     assert db.get_profile_by_oidc_identity(acct.identity)['id'] != pid
+
+
+# -- the provider's logo in my account --
+
+@pytest.mark.parametrize('url, ok', [
+    ('https://cdn.example.test/pocket-id.png', True),
+    ('http://cdn.example.test/pocket-id.png', False),
+    ('javascript:alert(1)', False),
+    ('data:image/png;base64,AAAA', False),
+    ('https://cdn.example.test/a.png" onerror="x', False),
+    ('', False),
+])
+def test_only_a_plain_https_icon_gets_through(url, ok):
+    assert oidc_signin.safe_icon_url(url) == (url if ok else '')
+
+
+def test_my_account_hands_over_the_icon(client, monkeypatch):
+    _config(monkeypatch, **{'security.oidc_icon_url': 'https://cdn.example.test/pocket-id.png'})
+    db = web_server.get_database()
+    pid = db.create_profile(name=f'Icon{_uid()}')
+    _sign_in_as(client, pid)
+    assert client.get('/api/profiles/me/oidc').get_json()['icon'] == 'https://cdn.example.test/pocket-id.png'
+    _config(monkeypatch, **{'security.oidc_icon_url': 'javascript:alert(1)'})
+    assert client.get('/api/profiles/me/oidc').get_json()['icon'] == ''
