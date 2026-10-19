@@ -78,6 +78,17 @@ function syncRetryConditionalRows() {
 }
 window.syncRetryConditionalRows = syncRetryConditionalRows;
 
+// Sign in with OIDC: the provider's settings (and the admin's connect row
+// inside them) only mean something while the toggle is on, so they hide when
+// it is off. Hidden fields keep their values and still save, so switching
+// OIDC off and on again loses nothing.
+function syncOidcProviderBlock() {
+    const toggle = document.getElementById('security-oidc-signin');
+    const block = document.getElementById('security-oidc-provider');
+    if (block) block.hidden = !(toggle && toggle.checked);
+}
+window.syncOidcProviderBlock = syncOidcProviderBlock;
+
 // Every Settings -> Quality control belongs to the profile currently shown in
 // the editor. Keep this list separate from ordinary app settings so a quality
 // edit uses the profile endpoint (and does not re-initialize every service
@@ -3644,6 +3655,7 @@ async function loadSettingsData() {
             if (plexDl) plexDl.checked = settings.security?.plex_signin_default_can_download || false;
             const oidcOn = document.getElementById('security-oidc-signin');
             if (oidcOn) oidcOn.checked = settings.security?.oidc_signin || false;
+            syncOidcProviderBlock();
             for (const [id, key] of [
                 ['security-oidc-issuer', 'oidc_issuer'],
                 ['security-oidc-client-id', 'oidc_client_id'],
