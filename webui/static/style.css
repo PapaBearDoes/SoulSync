@@ -75090,6 +75090,27 @@ body.src-modal-open { overflow: hidden; }
 #settings-page .settings-group[data-svc-side] .video-library-note {
     margin: 2px 0 0;
 }
+/* other TV libraries: one line each, the name then its Scan / Anime ticks */
+#settings-page .settings-group[data-svc-side] .video-library-tv-more {
+    align-items: flex-start;
+}
+#settings-page .settings-group[data-svc-side] .video-library-tv-more-list {
+    margin-left: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+#settings-page .settings-group[data-svc-side] .video-library-tv-more-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+#settings-page .settings-group[data-svc-side] .video-library-tv-more-item > span {
+    min-width: 10ch;
+    overflow-wrap: anywhere;
+}
 /* both sides describe their section the same way */
 #settings-page .settings-group[data-svc-side] > .setting-help-text {
     margin: -2px 0 14px;
