@@ -649,6 +649,42 @@ def _default_anime_dir() -> str:
         return ""
 
 
+def _routing_type_for(item: Dict[str, Any]) -> Optional[str]:
+    """``_default_route_type`` for an item that may not come from a wishlist
+    query (a repair grab carries only ``show_tmdb_id``): the library's rule
+    first -- set by hand, an anime-marked library, or a stored hint, never the
+    genre -- and TMDB only for a show in no library with no stored type."""
+    st = item.get("route_series_type")
+    if st:
+        return st
+    tmdb = item.get("show_tmdb_id")
+    if not tmdb:
+        return None
+    try:
+        from api.video import get_video_db
+        st = get_video_db().routing_series_type(tmdb_id=tmdb)
+    except Exception:   # noqa: BLE001 - routing falls back to the TV folder
+        st = None
+    if st and st != "standard":
+        return st
+    return _default_route_type(item)
+
+
+def item_target_dir(item: Dict[str, Any], media_type: str, root: str) -> str:
+    """The library folder ONE grabbed item goes to: ``root`` (the kind's folder),
+    except an episode of an anime-type show, which goes to the anime folder when
+    one is set -- the same rule the drain applies. For every grab path that is
+    not the drain (wishlist search now, RSS sync, repair grabs), which used to
+    send every episode to the TV folder."""
+    if media_type != "episode" or not root:
+        return root
+    anime_root = _default_anime_dir()
+    if not anime_root:
+        return root
+    from core.video.download_pipeline import tv_root_for
+    return tv_root_for(_routing_type_for(item), root, anime_root)
+
+
 def _extto_hits_for_context(ctx: Dict[str, Any]) -> tuple:
     from core.video.extto_search import extto_search
     from core.video.slskd_search import build_query

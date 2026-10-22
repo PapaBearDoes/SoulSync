@@ -266,7 +266,8 @@ def _rss_pass_inner(*, fetch, log, extto=None) -> Dict[str, Any]:
                 log("RSS skip: %s — %s" % (_item_label(item, media_type),
                                            _skip_reason(cands, min_rank, item)))
                 continue
-            if vpw._default_enqueue(item, best, cands, media_type, target):
+            if vpw._default_enqueue(item, best, cands, media_type,
+                                    vpw.item_target_dir(item, media_type, target)):
                 grabbed += 1
                 active.add(vpw.item_key(item, media_type))
                 log("RSS grab: %s (%s)" % (best.get("title"), media_type))
