@@ -153,7 +153,8 @@ def _one(item: Dict[str, Any], media_type: str, target: str, *, all_sources: boo
             return False
         if not budget.claim():
             return False
-        ok = bool(vpw._default_enqueue(item, best, cands or [], media_type, target))
+        ok = bool(vpw._default_enqueue(item, best, cands or [], media_type,
+                                       vpw.item_target_dir(item, media_type, target)))
         if not ok:
             budget.give_back()
         return ok
