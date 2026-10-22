@@ -317,7 +317,8 @@ def _make_organizer(db):
             probe_info = None
         plan = plan_import(dl, src, list_dir=fs.list_dir, probe=probe_info,
                            settings=settings, library_dir=_owned_library_dir(db, dl, settings),
-                           expected_duration_sec=_expected_duration_sec(db, dl))
+                           expected_duration_sec=_expected_duration_sec(db, dl),
+                           ids=template_ids(db, dl, settings))
         if _pre_persist_dest and plan["action"] in ("import", "upgrade") and plan.get("dest"):
             try:
                 db.update_video_download(dl["id"], dest_path=plan["dest"]["path"])
@@ -531,6 +532,54 @@ def _media_ids(db, dl):
         except Exception:   # noqa: BLE001
             return (None, None)
     return (None, None)
+
+
+_ID_TOKENS = {"tmdb_id": ("$tmdbid", "${tmdbid}"), "imdb_id": ("$imdbid", "${imdbid}"),
+              "tvdb_id": ("$tvdbid", "${tvdbid}")}
+
+
+def template_ids(db, dl, settings, *, tmdb_lookup=None):
+    """{tmdb_id, imdb_id, tvdb_id} for the naming template's id tokens -- an
+    episode's are its show's. The library row answers first (by row id for a
+    library re-grab, by TMDB id otherwise); TMDB is asked only when the
+    template actually uses an id the library doesn't have. Never raises; an
+    id that can't be found is None and renders empty.
+
+    ``tmdb_lookup(kind, tmdb_id) -> detail`` is injectable for tests; the
+    default is the enrichment engine's full TMDB detail."""
+    out = {"tmdb_id": None, "imdb_id": None, "tvdb_id": None}
+    try:
+        dl = dl or {}
+        kind = "movie" if str(dl.get("kind") or "").lower() == "movie" else "show"
+        if str(dl.get("kind") or "").lower() == "youtube" or not dl.get("media_id"):
+            return out
+        src = str(dl.get("media_source") or "").lower()
+        if src == "library":
+            out.update(db.video_external_ids(kind, media_id=dl.get("media_id")))
+        elif src == "tmdb":
+            out["tmdb_id"] = int(dl.get("media_id"))
+            found = db.video_external_ids(kind, tmdb_id=out["tmdb_id"])
+            out.update({k: v for k, v in found.items() if v})
+        else:
+            return out
+        if kind == "movie":
+            out["tvdb_id"] = None
+        tmpl = str((settings or {}).get("movie_template" if kind == "movie" else "episode_template")
+                   or "")
+        wanted = [k for k, toks in _ID_TOKENS.items()
+                  if any(t in tmpl for t in toks) and not (kind == "movie" and k == "tvdb_id")]
+        if out["tmdb_id"] and any(out[k] is None for k in wanted):
+            lookup = tmdb_lookup
+            if lookup is None:
+                from core.video.enrichment.engine import get_video_enrichment_engine
+                lookup = get_video_enrichment_engine().tmdb_full_detail
+            d = lookup(kind, out["tmdb_id"]) or {}
+            for k in wanted:
+                if out[k] is None and d.get(k):
+                    out[k] = d.get(k)
+    except Exception:   # noqa: BLE001 - an id is a naming nicety, never a blocker
+        logger.debug("template id resolution failed", exc_info=True)
+    return out
 
 
 def write_sidecars(db, dl, dest_path, settings, fs):
