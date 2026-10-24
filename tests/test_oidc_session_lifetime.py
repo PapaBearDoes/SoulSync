@@ -424,6 +424,32 @@ def test_two_requests_at_expiry_renew_once(client, monkeypatch):
     assert p.refresh_calls == ['rt-0']
 
 
+def test_two_requests_at_a_refused_expiry_ask_once(client, monkeypatch):
+    # the waiter must see the device the first request already ended, not
+    # send the same dead refresh token to the provider a second time
+    _config(monkeypatch)
+    p = _install(monkeypatch, _Provider(_uid(), delay=0.3))
+    _, device = _sign_in(client, p)
+    p.refresh_answer = (400, {'error': 'invalid_grant'})
+    _expire(device)
+    db = web_server.get_database()
+    results = []
+    go = threading.Barrier(4)
+
+    def hit():
+        go.wait()
+        results.append(oidc_session.check_device(device, db, web_server.config_manager))
+
+    threads = [threading.Thread(target=hit) for _ in range(4)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert results == [False] * 4
+    assert p.refresh_calls == ['rt-0']
+    assert _stored(device)['revoked_at'] is not None
+
+
 def test_turning_oidc_off_ends_its_sessions(client, monkeypatch):
     _config(monkeypatch)
     p = _install(monkeypatch, _Provider(_uid()))

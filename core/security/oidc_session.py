@@ -126,16 +126,16 @@ def check_device(device_id: Optional[str], db, config_manager, *,
             return True   # another request renewed it while this one waited
         if not row.get("refresh_token"):
             logger.info("OIDC session ended for profile %s: expired, no refresh token", row.get("owner_id"))
-            return False
+            return _ended(db, device_id, row)
         try:
             doc = oidc_signin.discover(settings.issuer)
             renewal = oidc_signin.refresh(settings, doc, row["refresh_token"], row["identity"], now=now)
         except oidc_signin.OidcError as e:
             logger.info("OIDC session ended for profile %s: %s", row.get("owner_id"), e)
-            return False
+            return _ended(db, device_id, row)
         except Exception as e:  # noqa: BLE001 - an unexpected failure is a failed renewal
             logger.warning("OIDC session renewal failed for profile %s: %s", row.get("owner_id"), e)
-            return False
+            return _ended(db, device_id, row)
         saved = db.set_profile_device_oidc(
             device_id, expires_at=renewal.expires_at, refresh_token=renewal.refresh_token,
             keep_refresh_token=renewal.refresh_token is None)
@@ -144,8 +144,25 @@ def check_device(device_id: Optional[str], db, config_manager, *,
             # a rotated token that couldn't be stored is spent: the next
             # renewal would be refused anyway, so end it now
             logger.warning("OIDC session ended for profile %s: renewal couldn't be saved", row.get("owner_id"))
-            return False
+            return _ended(db, device_id, row)
         return True
+
+
+def _ended(db, device_id: str, row: dict) -> bool:
+    """revoke a device whose renewal just failed, while its lock is still
+    held: a request that waited on the lock then re-reads a revoked row and
+    stops, instead of sending the same dead refresh token to the provider
+    again. returns False, the verdict for the caller"""
+    try:
+        owner = row.get("owner_id")
+        if owner is not None:
+            db.revoke_profile_device(int(owner), device_id)
+    except Exception as e:  # noqa: BLE001 - the caller revokes again via end_device
+        logger.debug("revoking an ended oidc session failed: %s", e)
+    from core.security import devices
+    devices.forget(device_id)
+    forget(device_id)
+    return False
 
 
 def end_device(db, device_id: str) -> None:
