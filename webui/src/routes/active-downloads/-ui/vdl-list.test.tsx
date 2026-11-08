@@ -218,6 +218,61 @@ describe('season groups', () => {
     expect(onCancelGroup).toHaveBeenCalledWith([1, 2]);
   });
 
+  // a season pack that failed before any episode existed: the head is the only
+  // thing drawn, and the head has no row menu. the pack has to be a row too.
+  const pack = (over: Partial<VdlDownload> = {}) =>
+    dl({
+      id: 50,
+      kind: 'show',
+      title: 'The Bear',
+      media_id: 456,
+      is_pack: true,
+      search_ctx: JSON.stringify({ season: 3, scope: 'season' }),
+      ...over,
+    });
+
+  it('draws a failed pack as a row with its own actions', () => {
+    const { container, cardActions } = list([
+      pack({ status: 'failed', error: 'Nothing in this pack looked like an episode' }),
+    ]);
+    const row = container.querySelector('.dlc-group-rows .dlc-row');
+    expect(row).not.toBeNull();
+    expect(row?.querySelector('.dlc-title')?.textContent).toBe('Season pack');
+    expect(row?.querySelector('.dlc-sub-bad')?.textContent).toBe(
+      'Nothing in this pack looked like an episode',
+    );
+    fireEvent.click(row?.querySelector('.dlc-more') as HTMLElement);
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Remove from list' }));
+    expect(cardActions.onRemove).toHaveBeenCalledWith(50);
+  });
+
+  it('gives an import-failed pack its Import action', () => {
+    const { container } = list([
+      pack({ status: 'import_failed', error: 'Nothing in this pack looked like an episode' }),
+    ]);
+    const row = container.querySelector('.dlc-group-rows .dlc-row') as HTMLElement;
+    expect(row.querySelector('.dlc-acts .dlc-btn-primary')?.textContent).toContain('Import');
+    fireEvent.click(row.querySelector('.dlc-more') as HTMLElement);
+    expect(screen.getByRole('menuitem', { name: 'Manual import' })).not.toBeNull();
+  });
+
+  it('shows the failed pack under the Failed filter', () => {
+    const { container } = list([pack({ status: 'import_failed', error: 'x' })], {
+      filter: 'failed',
+    });
+    const group = container.querySelector('[data-vdpg-group]') as HTMLElement;
+    expect(group.style.display).toBe('');
+    expect(group.querySelector('.dlc-group-rows .dlc-row')).not.toBeNull();
+  });
+
+  it('keeps a live pack as the head only', () => {
+    for (const status of ['downloading', 'importing']) {
+      const { container } = list([pack({ status })]);
+      expect(container.querySelector('.dlc-group-rows .dlc-row'), status).toBeNull();
+      cleanup();
+    }
+  });
+
   it('standalone rows share one surface between groups', () => {
     const { container } = list([dl({ id: 7 }), dl({ id: 8, title: 'Oppenheimer' })]);
     const surfaces = container.querySelectorAll('[data-vdl-list] > .dlc-list');
