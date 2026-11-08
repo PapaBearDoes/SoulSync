@@ -204,7 +204,14 @@ function VdlCard({
   const langs = vdlLangLabel(d.release_langs);
   const when = d.status === 'completed' ? clockTime(parseStamp(d.completed_at)) : '';
 
-  const title = inGroup && ctx.episode != null ? `Episode ${ctx.episode}` : vdlCardTitle(d);
+  // inside a group the head already names the show; the pack's own row is the pack
+  const title = inGroup
+    ? ctx.episode != null
+      ? `Episode ${ctx.episode}`
+      : vdlIsPackRow(d)
+        ? 'Season pack'
+        : vdlCardTitle(d)
+    : vdlCardTitle(d);
 
   const menu = [
     ...(target ? [{ key: 'open', label: target.label, onSelect: target.run }] : []),
@@ -684,6 +691,7 @@ function VdlGroup({
     }
   }
   const packActive = Boolean(pack && vdlIsActive(pack.status));
+  const packFailed = Boolean(pack && vdlIsFail(pack.status));
   if (packActive && pack) {
     speed = Number(pack.speed_bps) || speed;
     eta = Number(pack.eta_seconds) || eta;
@@ -797,6 +805,14 @@ function VdlGroup({
       </div>
       {open ? (
         <div className="dlc-group-rows">
+          {/* a failed pack is a row too. the head has no row menu, so a pack
+              that failed before any episode existed left nothing to act on:
+              no Import, no Remove from list, no Block release */}
+          {packFailed && pack ? (
+            <div key={pack.id} style={{ display: headVisible ? '' : 'none' }}>
+              {renderCard(pack, true)}
+            </div>
+          ) : null}
           {episodes.map((d) => (
             <div key={d.id} style={{ display: vdlMatchesFilter(d.status, filter) ? '' : 'none' }}>
               {renderCard(d, true)}
