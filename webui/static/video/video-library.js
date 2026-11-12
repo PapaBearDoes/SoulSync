@@ -115,6 +115,10 @@
             status: it.status, source: 'library'
         }) : '';
         if (ctrl) img = img.replace(/<\/div>$/, ctrl + '</div>');
+        // Shelf Life (admins only: the server sends it to nobody else) sits
+        // under the resolution / airing badge in the poster's top-left corner
+        var shelf = shelfLifeBadge(it.shelf_life);
+        if (shelf) img = img.replace(/<\/div>$/, shelf + '</div>');
 
         var badge = '';
         if (kind === 'movie') {
@@ -159,6 +163,23 @@
             '<h3 class="library-artist-name" title="' + esc(it.title) + '">' + esc(it.title) + '</h3>' +
             '<div class="library-artist-stats"><span class="library-artist-stat">' +
             meta.join(' · ') + '</span></div>' + extra + '</div></a>';
+    }
+
+    // Shelf Life chip: the score in a colour band against the job's threshold
+    // (red = flagged for cleanup, amber = close above the line, green = clear),
+    // or a shield when a gate protects the title. nothing for an unscored card.
+    function shelfLifeBadge(sl) {
+        if (!sl) return '';
+        if (sl.gate) {
+            return '<div class="video-card-shelf video-card-shelf--gate" title="Shelf Life: protected, ' +
+                esc(sl.gate_text || 'kept') + '">🛡</div>';
+        }
+        if (sl.score == null) return '';
+        var thr = (state.slThreshold != null) ? state.slThreshold : 30;
+        var band = sl.score < thr ? 'low' : (sl.score < thr + 15 ? 'mid' : 'ok');
+        var tip = 'Shelf Life ' + sl.score + (band === 'low' ? ', flagged for cleanup' : '');
+        return '<div class="video-card-shelf video-card-shelf--' + band + '" title="' + esc(tip) + '">' +
+            sl.score + '</div>';
     }
 
     // Show lifecycle chip: the server/TMDB status strings collapse to three states.
@@ -251,6 +272,11 @@
             .then(function (d) {
                 showLoading(false);
                 if (!d || d.error) { renderItems([], cardKind); updatePagination(null); setCount(0); return; }
+                state.slThreshold = (d.shelf_life_threshold != null) ? d.shelf_life_threshold : null;
+                // the server only sends a threshold to admins, so it also decides
+                // who sees the "Shelf Life, lowest first" sort
+                var slOpt = $('[data-video-lib-sort] option[value="shelf_life"]');
+                if (slOpt) slOpt.hidden = state.slThreshold == null;
                 renderItems(d.items || [], cardKind);
                 updatePagination(d.pagination);
                 setCount(d.pagination ? d.pagination.total_count : 0, d.total_size_bytes);
@@ -649,7 +675,9 @@
             });
         }
         var sort = $('[data-video-lib-sort]');
-        if (sort) sort.addEventListener('change', function () { state.sort = sort.value; reload(); });
+        if (sort) {
+            sort.addEventListener('change', function () { state.sort = sort.value; reload(); });
+        }
         var status = $('[data-video-lib-status]');
         if (status) status.addEventListener('change', function () { state.status = status.value; reload(); });
         var genreSel = $('[data-video-lib-genre]');

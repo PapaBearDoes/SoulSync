@@ -9130,6 +9130,16 @@ class VideoDatabase:
         finally:
             conn.close()
 
+    def shelf_life_scored(self, kind: str) -> bool:
+        """has the Shelf Life job stored any result for this kind yet?"""
+        if kind not in ("movie", "show"):
+            return False
+        conn = self._get_connection()
+        try:
+            return conn.execute("SELECT 1 FROM video_shelf_life WHERE kind = ? LIMIT 1", (kind,)).fetchone() is not None
+        finally:
+            conn.close()
+
     def shelf_life_set_keep(self, kind: str, tmdb_id, keep: bool, set_by=None) -> bool:
         """mark (or unmark) a title Keep. False for a bad kind or no tmdb id."""
         if kind not in ("movie", "show") or not tmdb_id:
@@ -13489,12 +13499,21 @@ class VideoDatabase:
         else:
             size_sub = ("(SELECT COALESCE(SUM(mf.size_bytes), 0) FROM media_files mf "
                         "WHERE mf.movie_id=m.id)")
+        # Shelf Life, lowest first (admin-only; the route only passes it for an
+        # admin): scored titles by score, then the ones a gate protects, then
+        # the never-scored
+        sl_kind = "show" if is_shows else "movie"
+        sl_row = (f"(SELECT %s FROM video_shelf_life sl WHERE sl.kind = '{sl_kind}' "
+                  f"AND sl.item_id = {alias}.id)")
         order_sql = {
             "title": title_key,
             "year": f"{alias}.year DESC, " + title_key,
             "added": f"{alias}.added_at DESC",
             "rating": f"{rating_key} IS NULL, {rating_key} DESC, " + title_key,
             "size": "size_bytes DESC, " + title_key,
+            "shelf_life": (f"CASE WHEN {sl_row % 'score'} IS NOT NULL THEN 0 "
+                           f"WHEN {sl_row % 'gate'} IS NOT NULL THEN 1 ELSE 2 END, "
+                           f"{sl_row % 'score'} ASC, " + title_key),
         }.get(sort, title_key)
 
         if is_shows:

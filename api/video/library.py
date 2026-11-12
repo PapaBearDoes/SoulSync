@@ -6,7 +6,7 @@ Reads what the last scan mirrored from the media server into video.db.
 
 from __future__ import annotations
 
-from flask import jsonify, request
+from flask import g, jsonify, request
 
 from utils.logging_config import get_logger
 
@@ -60,6 +60,41 @@ def _profile() -> int:
         return 1
 
 
+def _is_admin() -> bool:
+    return bool(getattr(g, "is_admin", getattr(g, "profile_id", 1) == 1))
+
+
+def _attach_shelf_life(db, kind: str, result: dict) -> None:
+    """an admin's library page shows each card's Shelf Life: its score, or the
+    gate protecting it. members never get it -- the reasons can name who
+    watched what. a card the job never scored gets nothing, and while the job
+    is off or has stored nothing for this kind the page gets nothing at all
+    (no threshold, so no Shelf Life sort either): a score nobody refreshes
+    would read as a live verdict."""
+    from core.video import shelf_life
+    sl_kind = "show" if kind in ("shows", "show") else "movie"
+    items = result.get("items") or []
+    try:
+        from core.video.repair.worker import get_video_repair_worker
+        cfg = get_video_repair_worker().job_config("shelf_life")
+        if not cfg.get("enabled") or not db.shelf_life_scored(sl_kind):
+            return
+        scores = db.shelf_life_get(sl_kind, [it.get("id") for it in items if it.get("id") is not None])
+        threshold = (cfg.get("settings") or {}).get("threshold")
+    except Exception:   # noqa: BLE001 - a badge never breaks the library page
+        logger.debug("shelf life badges skipped", exc_info=True)
+        return
+    for it in items:
+        s = scores.get(it.get("id"))
+        if s:
+            it["shelf_life"] = {"score": s["score"], "gate": s["gate"],
+                                "gate_text": shelf_life.GATE_TEXT.get(s["gate"]) if s["gate"] else None}
+    try:
+        result["shelf_life_threshold"] = int(threshold if threshold is not None else shelf_life.DEFAULT_THRESHOLD)
+    except (TypeError, ValueError):
+        result["shelf_life_threshold"] = shelf_life.DEFAULT_THRESHOLD
+
+
 def register_routes(bp):
     @bp.route("/library", methods=["GET"])
     def video_library():
@@ -83,11 +118,15 @@ def register_routes(bp):
             cap = video_cap()
             if cap is not None:
                 return jsonify(_capped_library(get_video_db(), cap, resolve_video_server()))
-            return jsonify(get_video_db().query_library(
+            sort = request.args.get("sort", "title")
+            admin = _is_admin()
+            if sort == "shelf_life" and not admin:
+                sort = "title"        # Shelf Life is admin-only, its sort too
+            result = get_video_db().query_library(
                 request.args.get("kind", "movies"),
                 search=request.args.get("search") or None,
                 letter=request.args.get("letter") or None,
-                sort=request.args.get("sort", "title"),
+                sort=sort,
                 status=request.args.get("status", "all"),
                 genre=request.args.get("genre") or None,
                 resolution=request.args.get("resolution") or None,
@@ -97,7 +136,10 @@ def register_routes(bp):
                 watcher=current_watcher().rows,
                 # the video library its files sit in (#2029)
                 video_library=request.args.get("video_library") or None,
-            ))
+            )
+            if admin:
+                _attach_shelf_life(get_video_db(), request.args.get("kind", "movies"), result)
+            return jsonify(result)
         except Exception:
             logger.exception("Failed to query video library")
             return jsonify({"error": "Failed to load video library"}), 500
