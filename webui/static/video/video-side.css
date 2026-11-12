@@ -4511,6 +4511,15 @@ body[data-side="video"] .settings-group[data-svc-side="music"].svc-side-active #
 .library-artist-card .video-card-badge--upcoming { color: #60a5fa; background: rgba(12, 25, 48, 0.82);
     border: 1px solid rgba(96, 165, 250, 0.38); }
 
+/* Shelf Life chip (admins only): under the corner badge, score in a band or a shield */
+.library-artist-card .video-card-shelf { position: absolute; top: 34px; left: 8px; z-index: 3; min-width: 22px;
+    padding: 2px 7px; font-size: 11px; font-weight: 800; text-align: center; border-radius: var(--radius-pill);
+    color: var(--text-bright); background: var(--black-a70); border: 1px solid var(--white-a18); }
+.library-artist-card .video-card-shelf--low { color: var(--danger-soft); border-color: rgba(var(--danger-soft-rgb), 0.5); }
+.library-artist-card .video-card-shelf--mid { color: var(--gold); border-color: rgba(var(--gold-rgb), 0.45); }
+.library-artist-card .video-card-shelf--ok { color: var(--success); border-color: rgba(var(--success-strong-rgb), 0.4); }
+.library-artist-card .video-card-shelf--gate { font-weight: 400; }
+
 /* slim owned-episodes progress under a show card's stats */
 .vlib-prog { margin-top: 7px; height: 3px; border-radius: var(--radius-pill); background: var(--white-a09); overflow: hidden; }
 .vlib-prog-fill { height: 100%; border-radius: var(--radius-pill); background: linear-gradient(90deg, rgba(164, 114, 245, 0.65), rgb(164, 114, 245)); }
