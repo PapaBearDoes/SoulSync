@@ -9,10 +9,16 @@ from datetime import datetime, timedelta
 
 import pytest
 
+from core.video import shelf_life as sl
+from core.video.repair import shelf_life as job_module
 from core.video.repair.worker import VideoRepairWorker
 from database.video_database import VideoDatabase
 
 GB = 1024 ** 3
+
+# the real server reads, kept before the autouse fixture below stands them in
+_REAL_PLAY_HISTORY = job_module._play_history
+_REAL_PLAYING_NOW = job_module._playing_now
 
 
 @pytest.fixture()
@@ -33,6 +39,16 @@ def _profiles(monkeypatch):
     monkeypatch.setattr(media_accounts, "plex_linked_profiles", lambda: [])
     monkeypatch.setattr(media_accounts, "profile_names", lambda: ({1: "Owner"}, "Owner"))
     monkeypatch.setattr(media_accounts, "admin_profile_ids", lambda: [1])
+    monkeypatch.setattr(media_accounts, "plex_link", lambda pid: None)
+
+
+@pytest.fixture(autouse=True)
+def _server(monkeypatch):
+    """no Plex play history and nothing playing unless a test sets some up;
+    the real reads ask a media server."""
+    from core.video.repair import shelf_life as job
+    monkeypatch.setattr(job, "_play_history", lambda db: None)
+    monkeypatch.setattr(job, "_playing_now", lambda db: set())
 
 
 def _ago(days):
@@ -644,3 +660,165 @@ def test_the_detail_routes_are_admin_only(tmp_path):
         assert videoapi._video_db.shelf_life_keeps() == set()
     finally:
         videoapi._video_db = None
+
+
+# ── everyone on the server (Plex play history) and what's playing now ───────
+class _Src:
+    server_name = "plex"
+
+    def __init__(self, rows):
+        self.rows = rows
+
+    def iter_play_history(self):
+        return iter(self.rows)
+
+
+def _history(monkeypatch, rows):
+    """the real _play_history over a fake Plex source with these rows."""
+    from core.video import sources
+    monkeypatch.setattr(sources, "resolve_video_server", lambda db=None: "plex")
+    monkeypatch.setattr(sources, "get_active_video_source", lambda **k: _Src(rows))
+    monkeypatch.setattr(job_module, "_play_history", _REAL_PLAY_HISTORY)
+
+
+def _play(acct, kind, server_id, days):
+    return {"account": str(acct), "kind": kind, "server_id": server_id, "viewed_at": _ago(days)}
+
+
+def test_people_without_a_soulsync_profile_count_from_the_servers_history(db, worker, monkeypatch):
+    # nobody SoulSync knows watched it; three other accounts on the server did
+    mid = _movie(db, "Theirs", tmdb=1, imdb=5.0, streaming="ok", count=5)
+    _history(monkeypatch, [_play(7, "movie", "m-Theirs", 20), _play(8, "movie", "m-Theirs", 40),
+                           _play(9, "movie", "m-Theirs", 60), _play(9, "movie", "m-Theirs", 300)])
+    _run(worker)
+    w = _stored(db, "movie", [mid])[mid]
+    assert w["gate"] is None and w["score"] >= 30          # not flagged
+    assert any("watched by 3 people" in r["text"] for r in w["reasons"])
+    assert _pending(db) == []
+
+
+def test_a_linked_profile_is_one_person_in_the_history_too(db, worker, monkeypatch):
+    from core import media_accounts
+    monkeypatch.setattr(media_accounts, "plex_linked_profiles", lambda: [(4, "tok")])
+    monkeypatch.setattr(media_accounts, "profile_names", lambda: ({1: "Owner", 4: "Z"}, "Owner"))
+    monkeypatch.setattr(media_accounts, "plex_link", lambda pid: {"id": "555", "title": "z", "token": "tok"})
+    mid = _movie(db, "Shared", tmdb=1, plays=1, last=_ago(10), imdb=7.0)
+    db.save_profile_watch_state(4, [("movie", mid, 2, _ago(8), 0)])
+    # the owner (account 1) and Z (555) show up in the history as well: still two people
+    _history(monkeypatch, [_play(1, "movie", "m-Shared", 10), _play(555, "movie", "m-Shared", 8)])
+    _run(worker)
+    w = _stored(db, "movie", [mid])[mid]
+    assert any("watched by 2 people" in r["text"] for r in w["reasons"])
+
+
+def test_a_show_is_counted_by_the_episodes_each_account_finished(db, worker, monkeypatch):
+    sid = _show(db, "Series", tmdb=10, owned=4, streaming="ok", count=5)
+    # account 7 finished all four (one twice), account 8 one, both long ago;
+    # an episode the library doesn't own counts for nothing
+    rows = [_play(7, "episode", "Series-e%d" % i, 200) for i in (1, 2, 3, 4, 4)]
+    rows += [_play(8, "episode", "Series-e1", 200), _play(8, "episode", "gone-e9", 200)]
+    _history(monkeypatch, rows)
+    (row, facts), = job_module.gather(db, dict(job_module.ShelfLifeJob.default_settings))["show"]
+    assert row["id"] == sid and facts["watching"] is False
+    w = facts["watch"]
+    # all of it for one, a quarter for the other: 1.25 people, 6 plays
+    assert w["watched"] == 2 and w["people"] == pytest.approx(1.25) and w["plays"] == 6
+
+
+def test_a_show_someone_on_the_server_watched_lately_is_held(db, worker, monkeypatch):
+    sid = _show(db, "Underway", tmdb=10, owned=4, streaming="ok", count=5)
+    _history(monkeypatch, [_play(7, "episode", "Underway-e2", 5)])
+    _run(worker)
+    assert _stored(db, "show", [sid])[sid]["gate"] == "watching"
+
+
+def test_unwatched_counts_only_from_where_the_history_starts(db, worker, monkeypatch):
+    # in the library ~3 years; the history only reaches back 100 days
+    mid = _movie(db, "Old", tmdb=1, imdb=5.0, streaming="ok", count=5)
+    _movie(db, "Other", tmdb=2, imdb=7.0)
+    _history(monkeypatch, [_play(7, "movie", "m-Other", 100), _play(7, "movie", "m-Other", 30)])
+    facts = dict((r["id"], f) for r, f in job_module.gather(db, dict(job_module.ShelfLifeJob.default_settings))["movie"])
+    _, text = sl.watch_signal(facts[mid], datetime.now())
+    assert text.startswith("no plays on record since ")
+    _run(worker)
+    # 100 days unwatched, not 1000: watch is about 50 * 0.5 ** (100 / 365)
+    assert _stored(db, "movie", [mid])[mid]["signals"]["watch"] == pytest.approx(41.1, abs=0.5)
+
+
+def test_a_history_that_cant_be_read_stops_the_run_and_changes_nothing(db, worker, monkeypatch):
+    from core.video import sources
+    from core.video.repair import shelf_life as job
+    _movie(db, "Dead", tmdb=1, imdb=5.0, streaming="ok", count=5)
+    _run(worker)
+    before = [f["id"] for f in _pending(db)]
+    assert before
+    monkeypatch.setattr(sources, "resolve_video_server", lambda db=None: "plex")
+    monkeypatch.setattr(sources, "get_active_video_source", lambda **k: None)
+    monkeypatch.setattr(job, "_play_history", _REAL_PLAY_HISTORY)
+    _run(worker)
+    assert [f["id"] for f in _pending(db)] == before
+
+
+def test_jellyfin_has_no_history_to_read(monkeypatch):
+    from core.video import sources
+    monkeypatch.setattr(sources, "resolve_video_server", lambda db=None: "jellyfin")
+    assert _REAL_PLAY_HISTORY(None) is None
+
+
+def test_a_title_playing_now_is_held_and_never_flagged(db, worker, monkeypatch):
+    from core.video.repair import shelf_life as job
+    mid = _movie(db, "Dead", tmdb=1, imdb=5.0, streaming="ok", count=5)
+    monkeypatch.setattr(job, "_playing_now", lambda db: {("movie", mid)})
+    _run(worker)
+    assert _stored(db, "movie", [mid])[mid]["gate"] == "playing"
+    assert _pending(db) == []
+
+
+def test_playing_now_reads_every_session_linked_to_the_library(monkeypatch):
+    from core import server_activity
+    monkeypatch.setattr(server_activity, "get_activity", lambda db=None: {"ok": True, "sessions": [
+        {"link": {"kind": "movie", "id": 3, "source": "library"}},
+        {"link": {"kind": "show", "id": 9, "source": "library"}},
+        {"link": {"kind": "movie", "id": 550, "source": "tmdb"}},      # not ours
+        {"link": None}]})
+    assert _REAL_PLAYING_NOW(None) == {("movie", 3), ("show", 9)}
+    monkeypatch.setattr(server_activity, "get_activity", lambda db=None: {"ok": False, "reason": "no_server"})
+    assert _REAL_PLAYING_NOW(None) == set()
+    monkeypatch.setattr(server_activity, "get_activity", lambda db=None: {"ok": False, "reason": "unreachable"})
+    assert _REAL_PLAYING_NOW(None) is None
+
+
+@pytest.mark.parametrize("playing,error", [
+    (lambda mid: {("movie", mid)}, "Someone is playing it right now"),
+    (lambda mid: None, "Couldn't ask the server"),
+])
+def test_fix_asks_the_server_again_right_before_deleting(db, worker, monkeypatch, playing, error):
+    from core.video import delete_title
+    from core.video.repair import shelf_life as job
+    calls = []
+    monkeypatch.setattr(delete_title, "run", lambda *a, **k: calls.append((a, k)) or {"success": True})
+    mid = _movie(db, "Dead", tmdb=1, imdb=5.0, streaming="ok", count=5)
+    _run(worker)
+    fid = _pending(db)[0]["id"]
+    # someone starts it after the scan
+    monkeypatch.setattr(job, "_playing_now", lambda db: playing(mid))
+    res = worker.fix_finding(fid, fix_action="Dead")
+    assert res["success"] is False and error in res["error"]
+    assert calls == []
+    assert db.repair_get_finding(fid)["status"] == "pending"
+
+
+def test_plex_play_history_keeps_movies_and_episodes_only():
+    from types import SimpleNamespace as NS
+
+    from core.video.sources import PlexVideoSource
+    when = datetime(2026, 1, 2, 3, 4, 5)
+    srv = NS(history=lambda: [
+        NS(type="movie", ratingKey=11, accountID=7, viewedAt=when),
+        NS(type="episode", ratingKey=12, accountID=1, viewedAt=None),
+        NS(type="track", ratingKey=13, accountID=7, viewedAt=when),       # music
+        NS(type="movie", ratingKey=None, accountID=7, viewedAt=when),     # item gone from the server
+    ])
+    rows = list(PlexVideoSource(srv).iter_play_history())
+    assert [(r["account"], r["kind"], r["server_id"]) for r in rows] == [("7", "movie", "11"), ("1", "episode", "12")]
+    assert rows[0]["viewed_at"] and rows[1]["viewed_at"] is None

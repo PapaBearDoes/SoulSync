@@ -9045,6 +9045,23 @@ class VideoDatabase:
         finally:
             conn.close()
 
+    def shelf_life_episode_shows(self, episode_ids) -> dict:
+        """{episode id: show id} for owned episodes among ``episode_ids`` --
+        how a play of one episode counts toward its show."""
+        ids = [int(i) for i in (episode_ids or [])]
+        out: dict = {}
+        conn = self._get_connection()
+        try:
+            for i in range(0, len(ids), 500):
+                chunk = ids[i:i + 500]
+                q = ",".join("?" * len(chunk))
+                for r in conn.execute(
+                        f"SELECT id, show_id FROM episodes WHERE has_file = 1 AND id IN ({q})", chunk):
+                    out[int(r[0])] = int(r[1])
+            return out
+        finally:
+            conn.close()
+
     def shelf_life_requests(self) -> dict:
         """{(kind, tmdb_id): {profile_id, available_at}} -- the latest APPROVED
         movie or show request per title."""

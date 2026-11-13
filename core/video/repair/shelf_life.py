@@ -7,11 +7,15 @@ title's facts from the library, scores movies and shows, stores every result
 finding for each candidate. Watched Cleanup is left alone: a movie it already
 has a pending finding for is scored but not flagged twice.
 
-Watching counts people (#1941): the owner (the shared columns) and every
-profile linked to its own Plex account, each by its own watch state. How many
-of them watched anything in the last ``active_days`` only decides whether
-watching can tell at all; with no linked profiles the owner is the only
-person, and always counts.
+Watching counts people: the owner (the shared columns), every profile linked
+to its own Plex account (#1941), each by its own watch state, and on Plex every
+other account that uses the server, from the server's own play history. The
+history keeps finished plays only, so what someone is part-way through is
+known for the owner and linked profiles, and for anyone else only while it's
+playing: anything playing or paused on the server right now is held, and is
+checked again right before a delete. How many people watched anything in the
+last ``active_days`` only decides whether watching can tell at all; with
+nobody but the owner to count, the owner always counts.
 
 Approving a finding deletes the WHOLE title through Delete Title
 (core/video/delete_title.py): acquisition stopped for every profile, the folder
@@ -60,6 +64,95 @@ def _activity(db, linked) -> dict:
     out = {"owner": activity.get("owner")}
     out.update({pid: activity["profiles"].get(pid) for pid in linked})
     return out
+
+
+def _play_history(db):
+    """the server's play history, by every account that uses it, or None when
+    the video server isn't Plex (Jellyfin keeps no such history for us):
+    {'movie': {movie id: {account: {plays, last}}},
+     'show': {show id: {account: {episodes, plays, last}}},
+     'last': {account: last play of anything}, 'since': the oldest play}.
+    a Plex server that can't be read raises: scoring without it would make
+    every title look less watched than it is."""
+    from core.video.sources import get_active_video_source, resolve_video_server
+    if resolve_video_server(db) != "plex":
+        return None
+    src = get_active_video_source()
+    if src is None or getattr(src, "server_name", None) != "plex":
+        raise RuntimeError("couldn't reach Plex to read its play history")
+    rows = list(src.iter_play_history())
+    out = {"movie": {}, "show": {}, "last": {}, "since": None}
+    movie_ids = db.watch_item_ids("movie", "plex", [r["server_id"] for r in rows if r["kind"] == "movie"])
+    ep_ids = db.watch_item_ids("episode", "plex", [r["server_id"] for r in rows if r["kind"] == "episode"])
+    ep_shows = db.shelf_life_episode_shows(ep_ids.values())
+    stamps = [r["viewed_at"] for r in rows if r["viewed_at"]]
+    out["since"] = min(stamps) if stamps else None
+    for r in rows:
+        acct, when = r["account"], r["viewed_at"]
+        if not acct:
+            continue
+        if when and (out["last"].get(acct) or "") < when:
+            out["last"][acct] = when
+        if r["kind"] == "movie":
+            mid = movie_ids.get(r["server_id"])
+            if mid is None:
+                continue          # not a movie the library holds
+            st = out["movie"].setdefault(mid, {}).setdefault(acct, {"plays": 0, "last": None})
+        else:
+            eid = ep_ids.get(r["server_id"])
+            sid = ep_shows.get(eid) if eid is not None else None
+            if sid is None:
+                continue          # an episode the library doesn't own
+            st = out["show"].setdefault(sid, {}).setdefault(acct, {"episodes": set(), "plays": 0, "last": None})
+            st["episodes"].add(eid)
+        st["plays"] += 1
+        if when and (st["last"] or "") < when:
+            st["last"] = when
+    return out
+
+
+def _playing_now(db):
+    """{(kind, library id)} for every title playing or paused on the server
+    right now, whoever is watching; a show is held for any of its episodes.
+    an empty set when no server is set up, None when it can't be asked."""
+    from core import server_activity
+    act = server_activity.get_activity(db)
+    if not act.get("ok"):
+        return set() if act.get("reason") == "no_server" else None
+    out = set()
+    for sess in act.get("sessions") or []:
+        link = sess.get("link") or {}
+        if link.get("source") == "library" and link.get("kind") in ("movie", "show") and link.get("id"):
+            out.add((link["kind"], int(link["id"])))
+    return out
+
+
+def _person_for(linked_accounts: dict):
+    """the person a Plex account id is: 'owner' for the server owner (account
+    1), a linked profile's id for its own account, else the account itself."""
+    by_account = {acct: pid for pid, acct in linked_accounts.items() if acct}
+
+    def person(acct):
+        if acct == "1":
+            return "owner"
+        return by_account.get(acct, "plex:" + acct)
+    return person
+
+
+def _merge_history(people: dict, plays: dict, person, owned=None) -> None:
+    """fold the server's history for one title into its people: a person the
+    library already knows keeps the larger of each count, anyone else joins."""
+    for acct, h in (plays or {}).items():
+        key = person(acct)
+        if owned is None:
+            frac = 1.0
+        else:
+            frac = min(1.0, len(h["episodes"]) / owned) if owned else 0.0
+        p = people.setdefault(key, {"plays": 0, "last": None, "frac": 0.0, "offset": 0, "in_progress_at": None})
+        p["plays"] = max(p["plays"], h["plays"])
+        p["frac"] = max(p["frac"], frac)
+        if h["last"] and (p["last"] or "") < h["last"]:
+            p["last"] = h["last"]
 
 
 def _active(activity: dict, now: datetime, active_days: int) -> int:
@@ -134,7 +227,20 @@ def gather(db, settings: dict, now: datetime | None = None) -> dict:
     active_days = _int_setting(settings, "active_days", 90)
     trust_after = _int_setting(settings, "trust_add_date_after_days", 90)
     linked = [pid for pid, _token in media_accounts.plex_linked_profiles()]
-    active = _active(_activity(db, linked), now, active_days)
+    activity = _activity(db, linked)
+    server_plays = _play_history(db)
+    person = _person_for({pid: str((media_accounts.plex_link(pid) or {}).get("id") or "") for pid in linked})
+    if server_plays:
+        for acct, when in server_plays["last"].items():
+            key = person(acct)
+            if when and (activity.get(key) or "") < when:
+                activity[key] = when
+    active = _active(activity, now, active_days)
+    since = server_plays["since"] if server_plays else None
+    playing = _playing_now(db)
+    if playing is None:
+        logger.warning("Shelf Life: couldn't ask the server what's playing; nothing is held for it this run")
+        playing = set()
     admins = media_accounts.admin_profile_ids()
     profiles = sorted(media_accounts.profile_names()[0]) or [1]
     keeps = db.shelf_life_keeps()
@@ -152,16 +258,21 @@ def gather(db, settings: dict, now: datetime | None = None) -> dict:
             members = members_by.get(row["id"]) or {}
             if kind == "movie":
                 people = _movie_people(row, members)
+                if server_plays:
+                    _merge_history(people, server_plays["movie"].get(row["id"]), person)
                 # anyone part-way through holds it, counted lately or not
-                in_progress = any(p["offset"] > 0 for p in people.values())
+                in_progress = any(p.get("offset", 0) > 0 for p in people.values())
                 watching = False
             else:
                 people = _show_people(row, members)
+                if server_plays:
+                    _merge_history(people, server_plays["show"].get(row["id"]), person,
+                                   owned=int(row.get("owned_episodes") or 0))
                 # an episode left part-way long ago doesn't hold a whole show forever
-                in_progress = any(_recent(p["in_progress_at"], now, active_days) for p in people.values())
+                in_progress = any(_recent(p.get("in_progress_at"), now, active_days) for p in people.values())
                 # someone watching a show finishes an episode every so often
                 watching = any(_recent(p["last"], now, active_days) for p in people.values())
-            watch = _watch(people, active)
+            watch = _watch(people, active, since)
             tmdb = int(row["tmdb_id"]) if row.get("tmdb_id") else None
             req = requests.get((kind, tmdb)) if tmdb else None
             request = None
@@ -173,6 +284,7 @@ def gather(db, settings: dict, now: datetime | None = None) -> dict:
                 "kind": kind, "title": row.get("title"), "year": row.get("year"),
                 "added_at": row.get("added_at"),
                 "added_from": row.get("added_from"),
+                "playing": (kind, row["id"]) in playing,
                 "in_progress": in_progress,
                 "watching": watching,
                 "keep": bool(tmdb and (kind, tmdb) in keeps),
@@ -329,10 +441,12 @@ class ShelfLifeJob(VideoRepairJob):
         "you approve it.\n\n"
         "The score mixes five signals, each also 0 to 100 and higher meaning keep. On a finding they show green "
         "when the signal argues for keeping the title, red when it argues for cutting it, amber in between.\n"
-        "- Watching: how many people have watched it, how recently and how often. One person who watched it "
+        "- Watching: how many people have watched it, how recently and how often. On Plex that's everyone who "
+        "uses the server, from its play history, not only SoulSync's profiles. One person who watched it "
         "gives 50 for this part, two 75, three 88: each adds half of what's left, so a title a couple of "
         "people love isn't sunk by everyone else on the server. A show counts each person by how much of it "
-        "they watched. A title nobody has watched starts at 50 and halves for every year it sits.\n"
+        "they watched. A title nobody has watched starts at 50 and halves for every year it sits; when the "
+        "server's play history doesn't reach back to its arrival, it counts from where the history starts.\n"
         "- Hard To Replace: how few streaming services carry it in your region (on none at all scores 100), and "
         "how many grabs failed before it landed.\n"
         "- Cultural Value: critic and audience ratings, trusted more the more votes stand behind them, plus "
@@ -342,10 +456,13 @@ class ShelfLifeJob(VideoRepairJob):
         "- Requests: asked for and watched by whoever asked scores 80. Asked for and never watched by them "
         "scores low once the request grace runs out. Never requested stays at 50.\n"
         "A signal with no data counts as 50, so it never drags a title down on its own.\n\n"
-        "Never flagged, whatever the score: anything someone is part-way through, a show someone watched an "
+        "Never flagged, whatever the score: anything playing or paused on the server right now (checked again "
+        "right before a delete), anything someone is part-way through, a show someone watched an "
         "episode of within Active Days, anything marked Keep, a "
         "request its requester hasn't watched yet (within Request Grace Days), a followed show still airing, "
-        "and anything newer than New Arrival Days. A movie Watched Cleanup has already flagged is scored but "
+        "and anything newer than New Arrival Days. Plex's history only records finished plays, so for someone "
+        "without a SoulSync profile, a title they left part-way is only held while it's playing. A movie "
+        "Watched Cleanup has already flagged is scored but "
         "not flagged twice. Dismissed titles are never flagged again.\n\n"
         "Approving deletes the whole title the way Delete Title does: acquisition stopped for every profile, "
         "the folder to the recycle bin, and the title hidden from Discover (undo that in Discover's ignore "
@@ -451,6 +568,13 @@ class ShelfLifeJob(VideoRepairJob):
         typed = fix_action if isinstance(fix_action, str) else ""
         if not typed.strip():
             return {"success": False, "error": "Type the title to confirm. Nothing was deleted."}
+        # the scan may be a day old: ask the server again, right before deleting
+        playing = _playing_now(context.db)
+        if playing is None:
+            return {"success": False,
+                    "error": "Couldn't ask the server whether anyone is playing it. Nothing was deleted."}
+        if (kind, int(item_id)) in playing:
+            return {"success": False, "error": "Someone is playing it right now. Nothing was deleted."}
         res = delete_title.run(context.db, kind, item_id, typed_title=typed,
                                resolved_by=_resolver_id(), notify=_notify)
         if not res.get("success"):

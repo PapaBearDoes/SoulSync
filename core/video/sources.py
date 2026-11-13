@@ -908,6 +908,21 @@ class PlexVideoSource:
                                          sort="lastViewedAt:desc"):
                     yield self._watch_row("episode", ep)
 
+    def iter_play_history(self):
+        """Every finished play on the server, by every account that uses it:
+        {account, kind, server_id, viewed_at}. It's the server's own play
+        history, so it needs the owner's token (other accounts see only their
+        own). Plex keeps a row once a play counts as watched; a title left
+        part-way has none. Movies and episodes only. Errors raise, so a partial
+        read is never taken for the whole set."""
+        for item in self._server.history():
+            kind = str(getattr(item, "type", "") or "")
+            key = getattr(item, "ratingKey", None)
+            if kind not in ("movie", "episode") or key is None:
+                continue          # music, or a row whose item the server no longer has
+            yield {"account": str(getattr(item, "accountID", "") or ""), "kind": kind,
+                   "server_id": str(key), "viewed_at": _iso_dt(getattr(item, "viewedAt", None))}
+
     @staticmethod
     def _watch_row(kind, item) -> dict:
         """the same three fields _movie / _episode read, for one item."""
