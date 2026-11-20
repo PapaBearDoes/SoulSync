@@ -34,6 +34,7 @@ import {
 const SAVED_WHEN_LEFT: Record<string, true> = {
   'vo-movie-template': true,
   'vo-episode-template': true,
+  'vo-anime-episode-template': true,
   'vo-youtube-template': true,
   'vo-recycle-days': true,
   'vo-recycle-path': true,
@@ -593,6 +594,19 @@ export function VideoOrganizationPanel({ hidden }: { hidden: boolean }) {
   const MOVIE_PH = '$title ($year)/$title ($year) $quality';
   const EPISODE_PH = '$series/Season $season/$series - S$seasonE$episode - $episodetitle $quality';
   const YOUTUBE_PH = '$channel/Season $year/$channel - $sxe - $title';
+  const ANIME_PH =
+    '$series/Season $season/$series - S$seasonE$episode - $absolute - $episodetitle $quality';
+  // an empty anime template means anime uses the episode template, so that is what it shows
+  const animePreview = () =>
+    loads
+      ? renderTemplate(
+          String(form.anime_episode_template || '') ||
+            String(form.episode_template || '') ||
+            EPISODE_PH,
+          EPISODE_EG,
+          colons,
+        ) + '.mkv'
+      : '…';
   // the ignore switches only mean something while embedded subs count
   const ignoresOff = loads > 0 && !form.subtitle_use_embedded;
 
@@ -662,6 +676,23 @@ export function VideoOrganizationPanel({ hidden }: { hidden: boolean }) {
             <code id="vo-episode-preview">
               {preview('episode_template', EPISODE_PH, EPISODE_EG, '.mkv')}
             </code>
+          </Hint>
+        </div>
+
+        <div className="form-group">
+          <label>Anime Episode Path Template:</label>
+          <TextField
+            id="vo-anime-episode-template"
+            field="anime_episode_template"
+            placeholder={ANIME_PH}
+          />
+          <Hint>
+            Used for anime shows (set by hand, or in a library marked Anime) instead of the episode
+            template. Leave it empty and anime is named like any other show. Same variables as
+            episodes; keep S$seasonE$episode in it, it&apos;s what your media server matches on.
+          </Hint>
+          <Hint>
+            Example: <code id="vo-anime-episode-preview">{animePreview()}</code>
           </Hint>
         </div>
 

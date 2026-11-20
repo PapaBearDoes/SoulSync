@@ -274,16 +274,17 @@ def move_plan(db, kind: str, item_id: int, library_id: int, folder=None) -> dict
                             "reason": "out of reach from here, on a drive only your media server sees"})
             continue
         fields = file_ops.naming_fields(row)
-        if organization.languages_unknown(row.get("scope"), fields, settings):
+        named = organization.for_series_type(settings, row.get("series_type"))
+        if organization.languages_unknown(row.get("scope"), fields, named):
             skipped.append({"file_id": row["file_id"], "filename": name,
                             "reason": "not read yet, so its name isn't known"})
             continue
-        if organization.absolute_unknown(row.get("scope"), fields, settings):
+        if organization.absolute_unknown(row.get("scope"), fields, named):
             skipped.append({"file_id": row["file_id"], "filename": name,
                             "reason": "its absolute number isn't known yet, so its name isn't either"})
             continue
         fields["quality"] = file_ops.file_quality(fields.get("quality"), real)
-        want = organization.render_path(row.get("scope"), root, fields, settings,
+        want = organization.render_path(row.get("scope"), root, fields, named,
                                         os.path.splitext(real)[1])["path"]
         if file_ops.same_path(real, want):
             continue

@@ -214,6 +214,7 @@ export function fillForm(o: Org): Form {
   return {
     movie_template: text(o.movie_template),
     episode_template: text(o.episode_template),
+    anime_episode_template: text(o.anime_episode_template),
     youtube_template: text(o.youtube_template),
     transfer_mode: text(o.transfer_mode, 'copy'),
     colon_replacement: text(o.colon_replacement, 'delete'),
@@ -251,6 +252,7 @@ export function fillForm(o: Org): Form {
 const EMPTY_FORM: Form = {
   movie_template: '',
   episode_template: '',
+  anime_episode_template: '',
   youtube_template: '',
   transfer_mode: 'copy',
   colon_replacement: 'delete',
@@ -310,6 +312,7 @@ export function orgBody(f: Form, order: string[], echo: Echo) {
   return {
     movie_template: s('movie_template'),
     episode_template: s('episode_template'),
+    anime_episode_template: s('anime_episode_template'),
     youtube_template: s('youtube_template'),
     transfer_mode: s('transfer_mode'),
     colon_replacement: s('colon_replacement') || 'delete',
@@ -351,6 +354,7 @@ export function orgBody(f: Form, order: string[], echo: Echo) {
 export const RESET_BODY = {
   movie_template: '',
   episode_template: '',
+  anime_episode_template: '',
   youtube_template: '',
   transfer_mode: 'copy',
   verify_with_ffprobe: true,

@@ -37,6 +37,17 @@
                                                 </div>
 
                                                 <div class="form-group">
+                                                    <label>Anime Episode Path Template:</label>
+                                                    <input type="text" id="vo-anime-episode-template"
+                                                        placeholder="$series/Season $season/$series - S$seasonE$episode - $absolute - $episodetitle $quality">
+                                                    <small class="settings-hint">Used for anime shows (set by hand, or in a library marked
+                                                        Anime) instead of the episode template. Leave it empty and anime is named like any other
+                                                        show. Same variables as episodes; keep S$seasonE$episode in it, it's what your media
+                                                        server matches on.</small>
+                                                    <small class="settings-hint">Example: <code id="vo-anime-episode-preview">&hellip;</code></small>
+                                                </div>
+
+                                                <div class="form-group">
                                                     <label for="vo-colon-replacement">Colons in titles:</label>
                                                     <select id="vo-colon-replacement">
                                                         <option value="delete">Delete (Dexter Resurrection)</option>
