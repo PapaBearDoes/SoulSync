@@ -102,6 +102,23 @@ export const EPISODE_EG = {
   tmdbid: '259909',
   imdbid: 'tt31846306',
 };
+// the anime template's preview: a second-season episode, so $absolute (026)
+// shows how it differs from $episode (01)
+export const ANIME_EG = {
+  ...EPISODE_EG,
+  series: 'Attack on Titan',
+  season: '02',
+  seasonraw: '2',
+  episode: '01',
+  episodetitle: 'Beast Titan',
+  absolute: '026',
+  year: '2013',
+  audiolangs: 'JA,EN',
+  sublangs: 'EN',
+  tvdbid: '267440',
+  tmdbid: '1429',
+  imdbid: 'tt2560140',
+};
 export const YOUTUBE_EG = {
   channel: 'Veritasium',
   title: 'How Electricity Actually Works',

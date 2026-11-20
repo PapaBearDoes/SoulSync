@@ -17,6 +17,7 @@ import {
 } from 'react';
 
 import {
+  ANIME_EG,
   EPISODE_EG,
   MOVIE_EG,
   MISSING_SUBS_JOB,
@@ -596,14 +597,15 @@ export function VideoOrganizationPanel({ hidden }: { hidden: boolean }) {
   const YOUTUBE_PH = '$channel/Season $year/$channel - $sxe - $title';
   const ANIME_PH =
     '$series/Season $season/$series - S$seasonE$episode - $absolute - $episodetitle $quality';
-  // an empty anime template means anime uses the episode template, so that is what it shows
+  // an empty anime template means anime uses the episode template, so that is what it shows,
+  // drawn on an anime sample
   const animePreview = () =>
     loads
       ? renderTemplate(
           String(form.anime_episode_template || '') ||
             String(form.episode_template || '') ||
             EPISODE_PH,
-          EPISODE_EG,
+          ANIME_EG,
           colons,
         ) + '.mkv'
       : '…';
@@ -689,7 +691,9 @@ export function VideoOrganizationPanel({ hidden }: { hidden: boolean }) {
           <Hint>
             Used for anime shows (set by hand, or in a library marked Anime) instead of the episode
             template. Leave it empty and anime is named like any other show. Same variables as
-            episodes; keep S$seasonE$episode in it, it&apos;s what your media server matches on.
+            episodes. Add $absolute for the episode&apos;s number counted across every season (026
+            for S02E01 when season 1 has 25), the way anime releases are numbered, but keep
+            S$seasonE$episode in it too: that&apos;s what your media server matches on.
           </Hint>
           <Hint>
             Example: <code id="vo-anime-episode-preview">{animePreview()}</code>
