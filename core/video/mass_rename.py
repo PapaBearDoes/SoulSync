@@ -163,11 +163,13 @@ def preview(progress: Optional[Callable[[int, int], None]] = None) -> Dict[str, 
     total = len(movies) + len(episodes)
     done = 0
 
-    def _consider(kind: str, key: str, title: str, stored: str, size, fields: Dict[str, Any]):
+    def _consider(kind: str, key: str, title: str, stored: str, size, fields: Dict[str, Any],
+                  series_type: Any = None):
         nonlocal unresolved
-        if organization.languages_unknown(kind, fields, settings):
+        named = organization.for_series_type(settings, series_type)
+        if organization.languages_unknown(kind, fields, named):
             return   # not probed yet: renaming now could strip a right '[JA]'
-        if organization.absolute_unknown(kind, fields, settings):
+        if organization.absolute_unknown(kind, fields, named):
             return   # no absolute number yet: renaming now would drop it
         local = _resolve(stored, size)
         if not local or not os.path.exists(local):
@@ -180,7 +182,7 @@ def preview(progress: Optional[Callable[[int, int], None]] = None) -> Dict[str, 
             base = os.path.dirname(local)
         ext = os.path.splitext(local)[1]
         fields = dict(fields, quality=file_quality(fields.get("quality"), local))
-        proposed = organization.render_path(kind, base, fields, settings, ext)["path"]
+        proposed = organization.render_path(kind, base, fields, named, ext)["path"]
         if os.path.normpath(proposed) != os.path.normpath(local):
             entries.append({"key": key, "kind": kind, "title": title,
                             "current": local, "proposed": proposed})
@@ -195,7 +197,7 @@ def preview(progress: Optional[Callable[[int, int], None]] = None) -> Dict[str, 
         label = "%s S%02dE%02d" % (r.get("show_title") or "?",
                                    r.get("season_number") or 0, r.get("episode_number") or 0)
         _consider("episode", "e:%s" % r["file_id"], label,
-                  r["relative_path"], r.get("size_bytes"), _episode_fields(r))
+                  r["relative_path"], r.get("size_bytes"), _episode_fields(r), r.get("series_type"))
         done += 1
         if progress and done % 25 == 0:
             progress(done, total)

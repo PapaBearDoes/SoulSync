@@ -51,6 +51,7 @@ def expected_path(row: dict, real: str, roots: List[str], settings: dict) -> Opt
     root = containing_root(real, roots or [])
     if not root:
         return None
+    settings = organization.for_series_type(settings, row.get("series_type"))
     fields = naming_fields(row)
     if organization.languages_unknown(row.get("scope"), fields, settings):
         return None   # not probed yet: its right name isn't known
