@@ -70,7 +70,7 @@ def _episode_fields(row: Dict[str, Any]) -> Dict[str, Any]:
             "subtitle_languages": row.get("subtitle_languages"),
             # an episode's ids are its show's, the same as at import
             "tmdbid": row.get("show_tmdb_id"), "imdbid": row.get("show_imdb_id"),
-            "tvdbid": row.get("show_tvdb_id")}
+            "tvdbid": row.get("show_tvdb_id"), "absolute": row.get("absolute_number")}
 
 
 def _base_dir_of(path: str, base_dirs: List[str]) -> Optional[str]:
@@ -167,6 +167,8 @@ def preview(progress: Optional[Callable[[int, int], None]] = None) -> Dict[str, 
         nonlocal unresolved
         if organization.languages_unknown(kind, fields, settings):
             return   # not probed yet: renaming now could strip a right '[JA]'
+        if organization.absolute_unknown(kind, fields, settings):
+            return   # no absolute number yet: renaming now would drop it
         local = _resolve(stored, size)
         if not local or not os.path.exists(local):
             unresolved += 1

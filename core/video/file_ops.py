@@ -35,7 +35,8 @@ def naming_fields(row: dict) -> dict:
             "codec": row.get("video_codec"), "tmdbid": row.get("tmdb_id"),
             "imdbid": row.get("imdb_id"), "tvdbid": row.get("tvdb_id"),
             "audio_languages": row.get("audio_languages"),
-            "subtitle_languages": row.get("subtitle_languages")}
+            "subtitle_languages": row.get("subtitle_languages"),
+            "absolute": row.get("absolute_number")}
 
 
 def same_path(a: str, b: str) -> bool:
@@ -53,6 +54,8 @@ def expected_path(row: dict, real: str, roots: List[str], settings: dict) -> Opt
     fields = naming_fields(row)
     if organization.languages_unknown(row.get("scope"), fields, settings):
         return None   # not probed yet: its right name isn't known
+    if organization.absolute_unknown(row.get("scope"), fields, settings):
+        return None   # its absolute number isn't known yet
     fields["quality"] = file_quality(fields.get("quality"), real)
     ext = os.path.splitext(real)[1]
     return organization.render_path(row.get("scope"), root, fields, settings, ext)["path"]

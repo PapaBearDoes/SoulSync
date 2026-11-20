@@ -654,7 +654,8 @@ export function VideoOrganizationPanel({ hidden }: { hidden: boolean }) {
           <Hint>
             Variables: $series, $season (01), $seasonraw (1), $episode (01), $episodetitle, $year,
             $quality, $resolution, $source, $codec, $audiolangs, $sublangs, $tmdbid, $imdbid,
-            $tvdbid (the show&apos;s ids).
+            $tvdbid (the show&apos;s ids), $absolute (001, the episode&apos;s number counted across
+            every season, for anime).
           </Hint>
           <Hint>
             Example:{' '}
