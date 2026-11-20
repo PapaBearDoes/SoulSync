@@ -283,6 +283,10 @@ def move_plan(db, kind: str, item_id: int, library_id: int, folder=None) -> dict
             skipped.append({"file_id": row["file_id"], "filename": name,
                             "reason": "its absolute number isn't known yet, so its name isn't either"})
             continue
+        if organization.missing_ids(row.get("scope"), fields, named):
+            skipped.append({"file_id": row["file_id"], "filename": name,
+                            "reason": "an id its name uses isn't known yet"})
+            continue
         fields["quality"] = file_ops.file_quality(fields.get("quality"), real)
         want = organization.render_path(row.get("scope"), root, fields, named,
                                         os.path.splitext(real)[1])["path"]
