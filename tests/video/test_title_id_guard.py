@@ -140,8 +140,8 @@ def test_approving_it_requeues_tmdb_enrichment_and_the_id_retires_it(db, tmp_pat
     from core.video.repair.worker import VideoRepairWorker
     show_id = _seed_show_files(db, tmp_path, n=1)
     conn = db._get_connection()
-    conn.execute("UPDATE shows SET tmdb_match_status='matched', tmdb_last_attempted=CURRENT_TIMESTAMP "
-                 "WHERE id=?", (show_id,))
+    conn.execute("UPDATE shows SET tmdb_match_status='matched', tmdb_last_attempted=CURRENT_TIMESTAMP, "
+                 "tvdb_match_status='matched', tvdb_last_attempted=CURRENT_TIMESTAMP WHERE id=?", (show_id,))
     conn.commit()
     conn.close()
     worker = VideoRepairWorker(db)
@@ -149,9 +149,11 @@ def test_approving_it_requeues_tmdb_enrichment_and_the_id_retires_it(db, tmp_pat
     finding = _pending(db, "naming_id_missing")[0]
     res = worker.fix_finding(finding["id"])
     assert res["success"] is True and res["action"] == "queued"
+    assert "TMDB and TVDB" in res["message"]
     conn = db._get_connection()
-    status = conn.execute("SELECT tmdb_match_status FROM shows WHERE id=?", (show_id,)).fetchone()[0]
-    assert status is None                                  # back in the enrichment queue
+    status = conn.execute("SELECT tmdb_match_status, tvdb_match_status FROM shows WHERE id=?",
+                          (show_id,)).fetchone()
+    assert tuple(status) == (None, None)                   # back in both enrichment queues
     # enrichment fills the id: the hold retires and the files are checked again
     conn.execute("UPDATE shows SET imdb_id='tt0105559' WHERE id=?", (show_id,))
     conn.commit()
@@ -159,3 +161,17 @@ def test_approving_it_requeues_tmdb_enrichment_and_the_id_retires_it(db, tmp_pat
     worker._run_job("naming_conformance", forced=True)
     assert _pending(db, "naming_id_missing") == []
     assert [f["details"]["expected_path"].endswith("S01E01.mkv") for f in _pending(db, "naming_mismatch")] == [True]
+
+
+def test_a_title_that_carries_its_year_is_not_labelled_with_it_twice(db, tmp_path):
+    from core.video.repair.worker import VideoRepairWorker
+    show_id = _seed_show_files(db, tmp_path, n=1)
+    conn = db._get_connection()
+    conn.execute("UPDATE shows SET title='The Body (2026)', year=2026 WHERE id=?", (show_id,))
+    conn.commit()
+    conn.close()
+    organization.save(db, {"episode_template": "$series {imdb-$imdbid}/Season $season/$series - S$seasonE$episode"})
+    VideoRepairWorker(db)._run_job("naming_conformance", forced=True)
+    held = _pending(db, "naming_id_missing")
+    assert [h["title"].split(" — ")[0] for h in held] == ["The Body (2026)"]
+    assert "Manage panel, under Matches" in held[0]["description"]

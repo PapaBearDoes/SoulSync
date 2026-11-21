@@ -23,8 +23,9 @@ stripped a quality tag the file already carried.
 A template that names a title id ($imdbid ...) the title has no stored value
 for would render it empty and strip the '{imdb-tt...}' the folder carries.
 Those files are left alone, and the title gets one 'naming_id_missing'
-finding saying so; approving it re-queues the title's TMDB enrichment, which
-fills the id, and the next check names the files as usual.
+finding saying so; approving it re-queues the title's TMDB enrichment (and
+TVDB's, for a show), which fills the id when a source has it, and the next
+check names the files as usual.
 """
 
 from __future__ import annotations
@@ -138,7 +139,9 @@ class NamingConformanceJob(VideoRepairJob):
         kind = "movie" if h["scope"] == "movie" else "show"
         entity_id = "%s:%s:%s" % (kind, h["title_id"], "+".join(h["missing"]))
         ids = " or ".join(organization.ID_LABELS[m] for m in h["missing"])
-        label = (h.get("title") or "?") + (" (%s)" % h["year"] if h.get("year") else "")
+        label = h.get("title") or "?"
+        if h.get("year") and not label.endswith("(%s)" % h["year"]):
+            label += " (%s)" % h["year"]   # Plex's 'The Body (2026)' already carries it
         n = h["files"]
         context.create_finding(
             finding_type="naming_id_missing", severity="warning",
@@ -146,8 +149,9 @@ class NamingConformanceJob(VideoRepairJob):
             title=f"{label} — name not checked: no {ids} stored",
             description=(f"Your naming template uses the {ids}, and this title has none stored, so "
                          f"its {n} file{'s' if n != 1 else ''} keep their names rather than lose the "
-                         "id tag they carry. Re-enrich asks TMDB for it again; if TMDB can't match "
-                         "the title, fix its match from the title's page."),
+                         "id tag they carry. Re-enrich asks TMDB for it again"
+                         + (", and TVDB" if kind == "show" else "")
+                         + ". If no source has it, set it in the title's Manage panel, under Matches."),
             details={"kind": kind, "title_id": h["title_id"], "title": h.get("title"),
                      "year": h.get("year"), "missing": h["missing"], "files": n,
                      "example_path": h["example_path"]})
@@ -159,8 +163,12 @@ class NamingConformanceJob(VideoRepairJob):
             if d.get("title_id") is None or d.get("kind") not in ("movie", "show"):
                 return {"success": False, "error": "finding has no title"}
             context.db.enrichment_retry("tmdb", d["kind"], scope="item", item_id=d["title_id"])
+            sources = "TMDB"
+            if d["kind"] == "show":   # TVDB links a show to its IMDb and TMDB ids too
+                context.db.enrichment_retry("tvdb", "show", scope="item", item_id=d["title_id"])
+                sources = "TMDB and TVDB"
             return {"success": True, "action": "queued",
-                    "message": f"Re-queued TMDB enrichment for {d.get('title') or 'the title'}. "
+                    "message": f"Re-queued {sources} enrichment for {d.get('title') or 'the title'}. "
                                "The next naming check renames its files once the id is in."}
         cur, want = d.get("current_path"), d.get("expected_path")
         if not cur or not want:
