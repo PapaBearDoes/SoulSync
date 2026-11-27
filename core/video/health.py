@@ -20,7 +20,8 @@ _ROOTS = (("movies_path", "Movie library"), ("tv_path", "TV library"),
           ("youtube_path", "YouTube library"))
 # the optional 4K libraries, checked only while switched on
 _FOUR_K_ROOTS = (("movie", "movies_4k_path", "4K movie library"),
-                 ("episode", "tv_4k_path", "4K TV library"))
+                 ("episode", "tv_4k_path", "4K TV library"),
+                 ("anime", "anime_4k_path", "4K anime library"))
 
 
 def _check(cid, label, status, detail) -> dict:

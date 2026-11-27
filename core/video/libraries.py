@@ -20,8 +20,16 @@ Which library a title files into (``choose``), first match wins:
   6. the main library
 
 A library that is switched off, or has no folder, is skipped at every step,
-so turning one off is a clean undo. The anime folder is not a library: an
-anime show keeps going there unless a library was picked for it by hand.
+so turning one off is a clean undo.
+
+The anime folder is a TV library too (``builtin`` 'anime', its folder in
+anime_path), and so is an optional Anime 4K one ('anime4k', anime_4k_path +
+anime_4k_enabled). An anime show files there right after a hand pick (step
+2), so it takes the anime library's own settings, not TV's: the Anime 4K one
+when the title's profile says 4K and Anime 4K is on, else Anime. Anime is by
+the show's type, never its genre, so an anime library has no rules, and it
+is never the default. With no anime folder set there is no anime library and
+an anime show files like any other show, as before.
 
 Imports nothing from the music side.
 """
@@ -48,6 +56,11 @@ MAX_RULE_TERMS = 30
 _MAIN_KEYS = {"movie": "movies_path", "show": "tv_path"}
 _FOUR_K_KEYS = {"movie": ("movies_4k_enabled", "movies_4k_path"),
                 "show": ("tv_4k_enabled", "tv_4k_path")}
+# the anime libraries (TV only): the folder anime shows file into, and its 4K
+# sibling (switch, folder) like TV 4K's
+ANIME_BUILTINS = ("anime", "anime4k")
+_ANIME_KEY = "anime_path"
+_ANIME_4K_KEYS = ("anime_4k_enabled", "anime_4k_path")
 
 
 def kind_of(value: Any) -> Optional[str]:
@@ -180,6 +193,13 @@ def _builtin_state(db, kind: str, builtin: str) -> tuple:
         if not path and kind == "movie":
             path = str(db.get_setting("transfer_path") or "").strip()
         return path, True
+    if builtin == "anime":
+        return str(db.get_setting(_ANIME_KEY) or "").strip(), True
+    if builtin == "anime4k":
+        # the anime folder's 4K sibling: no anime folder, no Anime 4K
+        switch, folder = _ANIME_4K_KEYS
+        anime = str(db.get_setting(_ANIME_KEY) or "").strip()
+        return str(db.get_setting(folder) or "").strip(), bool(anime) and _on(db.get_setting(switch))
     switch, folder = _FOUR_K_KEYS[kind]
     return str(db.get_setting(folder) or "").strip(), _on(db.get_setting(switch))
 
@@ -205,7 +225,8 @@ def _rows(db, where: str = "", args: tuple = ()) -> list:
         return conn.execute(
             "SELECT id, kind, name, path, builtin, enabled, is_default, position, options "
             "FROM video_libraries " + where +
-            " ORDER BY kind, CASE builtin WHEN 'main' THEN 0 WHEN '4k' THEN 1 ELSE 2 END, "
+            " ORDER BY kind, CASE builtin WHEN 'main' THEN 0 WHEN '4k' THEN 1 WHEN 'anime' THEN 2 "
+            "WHEN 'anime4k' THEN 3 ELSE 4 END, "
             "position, id", args).fetchall()
     finally:
         conn.close()
@@ -246,8 +267,8 @@ def _check_path(db, path: Any, *, skip_id: Optional[int] = None) -> str:
     if "\x00" in path:
         raise ValueError("Library folders cannot contain null characters")
     for lib in list_libraries(db):
-        if lib["id"] == skip_id:
-            continue
+        if lib["id"] == skip_id or lib["builtin"] == "anime":
+            continue   # the anime folder is named below
         if _same(lib["path"], path):
             raise ValueError("%s already uses that folder" % lib["name"])
     for key, label in (("anime_path", "The anime folder"), ("youtube_path", "The YouTube folder")):
@@ -324,6 +345,9 @@ def update_library(db, library_id: Any, body: Any) -> Dict[str, Any]:
             if key in body:
                 merged[key] = body.get(key)
         opts = normalize_options(merged)
+        if lib["builtin"] in ANIME_BUILTINS:
+            # anime is by the show's type, never a genre or keyword
+            opts["rules"] = {"genres": [], "keywords": []}
         _check_profile(db, opts["quality_profile_id"])
         sets.append("options=?")
         args.append(json.dumps(opts))
@@ -389,6 +413,8 @@ def set_default(db, library_id: Any) -> Dict[str, Any]:
     lib = get_library(db, library_id)
     if not lib:
         raise LookupError("No such library")
+    if lib["builtin"] in ANIME_BUILTINS:
+        raise ValueError("%s takes anime shows only, so it can't be where every new show goes" % lib["name"])
     if not lib["usable"]:
         raise ValueError("%s needs a folder and to be switched on first" % lib["name"])
     conn = db.connect()
@@ -523,13 +549,28 @@ def _resolve(value: Any) -> Any:
     return value() if callable(value) else value
 
 
+def _is_anime(db, tmdb_id: Any, series_type: Any) -> bool:
+    """the show's routing type is anime: the type the caller worked out (a
+    value or a callable), else the stored one (set by hand, an anime-marked
+    library or the show's hint; never the genre)"""
+    st = _resolve(series_type) if series_type is not None else None
+    if st in (None, "") and tmdb_id not in (None, ""):
+        try:
+            st = db.routing_series_type(tmdb_id=int(tmdb_id))
+        except Exception:   # noqa: BLE001 - an unknown type files as a show
+            st = None
+    return str(st or "").strip().lower() == "anime"
+
+
 def choose(db, kind: Any, *, tmdb_id: Any = None, explicit_id: Any = None,
            profile_library: Any = None, title: Any = None,
-           tags: Any = None) -> Optional[Dict[str, Any]]:
+           tags: Any = None, series_type: Any = None) -> Optional[Dict[str, Any]]:
     """The library a title of this kind files into, with ``why`` set to
-    'picked' | 'assigned' | 'profile' | 'rule: ...' | 'default'. See the
-    module doc for the order. ``profile_library`` ('main' / '4k', or a
-    callable giving it) is only asked while the 4K library is usable;
+    'picked' | 'assigned' | 'anime' | 'profile' | 'rule: ...' | 'default'.
+    See the module doc for the order. ``profile_library`` ('main' / '4k', or
+    a callable giving it) is only asked while a 4K library is usable;
+    ``series_type`` (the show's routing type, or a callable giving it; the
+    stored one when not given) only while the anime library is usable;
     ``tags`` (a dict or a callable; defaults to :func:`title_tags`) only while
     a usable library has rules. None when the kind is unknown."""
     k = kind_of(kind)
@@ -551,10 +592,16 @@ def choose(db, kind: Any, *, tmdb_id: Any = None, explicit_id: Any = None,
         assigned = title_assignment(db, k, tmdb_id)
         if assigned in by_id:
             return pick(by_id[assigned], "assigned")
+    anime = next((lib for lib in usable if lib["builtin"] == "anime"), None)
+    if anime and _is_anime(db, tmdb_id, series_type):
+        anime_4k = next((lib for lib in usable if lib["builtin"] == "anime4k"), None)
+        if anime_4k and str(_resolve(profile_library) or "").strip().lower() == "4k":
+            return pick(anime_4k, "anime")
+        return pick(anime, "anime")
     four_k = next((lib for lib in usable if lib["builtin"] == "4k"), None)
     if four_k and str(_resolve(profile_library) or "").strip().lower() == "4k":
         return pick(four_k, "profile")
-    ruled = [lib for lib in usable if has_rules(lib)]
+    ruled = [lib for lib in usable if has_rules(lib) and lib["builtin"] not in ANIME_BUILTINS]
     if ruled:
         t = tags if tags is not None else (lambda: title_tags(db, k, tmdb_id))
         got = _resolve(t) or {}
@@ -562,7 +609,7 @@ def choose(db, kind: Any, *, tmdb_id: Any = None, explicit_id: Any = None,
             hit = rule_match(lib["rules"], got, title)
             if hit:
                 return pick(lib, "rule: " + hit)
-    default = next((lib for lib in usable if lib["is_default"]), None)
+    default = next((lib for lib in usable if lib["is_default"] and lib["builtin"] not in ANIME_BUILTINS), None)
     if default:
         return pick(default, "default")
     main = next((lib for lib in libs if lib["builtin"] == "main"), None)
@@ -856,5 +903,5 @@ __all__ = ["KINDS", "kind_of", "normalize_options", "list_libraries", "get_libra
            "choose", "custom_folders", "library_for_path", "folder_for",
            "default_profile_for", "title_copies", "add_copy", "remove_copy", "attribute_files",
            "SOURCES", "library_of_folder", "client_category", "source_chain", "indexer_ids_for",
-           "allows_automatic"]
+           "allows_automatic", "ANIME_BUILTINS"]
 

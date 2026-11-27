@@ -718,7 +718,8 @@ def test_downloads_config_save_load(tmp_path, monkeypatch):
             "movies_additional_paths": [], "tv_additional_paths": [], "home_paths": [],
             # the optional 4K libraries, off until switched on
             "movies_4k_enabled": False, "movies_4k_path": "",
-            "tv_4k_enabled": False, "tv_4k_path": ""}
+            "tv_4k_enabled": False, "tv_4k_path": "",
+            "anime_4k_enabled": False, "anime_4k_path": ""}
         # Round-trips: libraries → video.db, the INPUT folder → the SHARED music key.
         client.post("/api/video/downloads/config",
                     json={"download_path": " /mnt/v/dl ", "movies_path": "/media/movies",
@@ -737,7 +738,8 @@ def test_downloads_config_save_load(tmp_path, monkeypatch):
             "movies_additional_paths": [], "tv_additional_paths": [], "home_paths": [],
             # the optional 4K libraries, off until switched on
             "movies_4k_enabled": False, "movies_4k_path": "",
-            "tv_4k_enabled": False, "tv_4k_path": ""}
+            "tv_4k_enabled": False, "tv_4k_path": "",
+            "anime_4k_enabled": False, "anime_4k_path": ""}
         # The input folder is the SHARED soulseek.download_path (so music sees it too);
         # it is NOT stored in video.db.
         assert fake.get("soulseek.download_path") == "/mnt/v/dl"

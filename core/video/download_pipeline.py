@@ -84,8 +84,8 @@ def target_dir_for(kind: str, paths: dict, series_type: Any = None,
     (standard / daily / anime); TV downloads of an anime show go to
     ``anime_path`` when it is set (see ``tv_root_for``). ``library`` is the
     title's quality profile's choice: '4k' files into that kind's 4K library
-    when it's on, else the main one. Anime keeps its own folder either way:
-    it's a library by type, the 4K one is by quality."""
+    when it's on, else the main one. Anime keeps its own folders either way:
+    the Anime 4K one by quality when it's on, else the anime folder."""
     paths = paths or {}
     k = str(kind or "").lower()
     four_k = str(library or "").strip().lower() == "4k"
@@ -96,6 +96,8 @@ def target_dir_for(kind: str, paths: dict, series_type: Any = None,
     if k in ("show", "tv", "episode", "season", "series"):
         anime = str(paths.get("anime_path") or "").strip()
         if anime and str(series_type or "").strip().lower() == "anime":
+            if four_k and paths.get("anime_4k_path"):
+                return paths["anime_4k_path"]
             return anime
         if four_k and paths.get("tv_4k_path"):
             return paths["tv_4k_path"]

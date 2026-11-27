@@ -42,7 +42,8 @@ def test_a_fresh_database_has_the_main_and_4k_libraries(db):
     rows = libs.list_libraries(db)
     assert [(r["kind"], r["builtin"], r["name"]) for r in rows] == [
         ("movie", "main", "Movies"), ("movie", "4k", "Movies 4K"),
-        ("show", "main", "TV"), ("show", "4k", "TV 4K")]
+        ("show", "main", "TV"), ("show", "4k", "TV 4K"),
+        ("show", "anime", "Anime"), ("show", "anime4k", "Anime 4K")]
     main = rows[0]
     assert main["is_default"] and main["usable"] and main["path"] == "/media/movies"
     four_k = rows[1]
@@ -80,7 +81,7 @@ def test_an_existing_install_is_migrated_with_no_change(tmp_path):
     assert libs.choose(db, "show", tmdb_id=1, profile_library="4k")["builtin"] == "main"
     # a restart seeds nothing twice
     db = _reopen(path)
-    assert len(libs.list_libraries(db)) == 4
+    assert len(libs.list_libraries(db)) == 6
 
 
 def test_a_legacy_transfer_folder_is_the_main_movie_library(tmp_path):
@@ -344,7 +345,7 @@ def _grab(client, **extra):
 def test_api_library_crud(api):
     client, _db = api
     out = client.get("/api/video/libraries/folders").get_json()
-    assert len(out["libraries"]) == 4 and "genres" in out
+    assert len(out["libraries"]) == 6 and "genres" in out
     bad = client.post("/api/video/libraries/folders", json={"kind": "movie", "name": "X"})
     assert bad.status_code == 400 and "folder" in bad.get_json()["error"]
     made = client.post("/api/video/libraries/folders",

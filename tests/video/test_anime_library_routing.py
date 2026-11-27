@@ -15,10 +15,11 @@ quality profile, indexers, sources, category, automatic search) for each.
 a show is anime three ways: by a stored hint (a show in no library), filed
 in a plex library ticked anime, filed in a jellyfin library ticked anime.
 
-as written this pins upstream's behaviour: an anime show's FILE goes to the
-anime folder while its SETTINGS come from whatever library the order picks
-with anime ignored (the tv default, a custom default, tv 4k, a rule
-library). see the anime library rows marked ``SETTINGS_FROM_TV_SIDE``.
+before the anime library an anime show's FILE went to the anime folder
+while its SETTINGS came from whatever library the order picked with anime
+ignored (the tv default, a custom default, tv 4k, a rule library): the rows
+in ``WAS_SETTINGS_FROM_TV_SIDE``. now both come from the Anime library (or
+Anime 4K), and nothing else moves.
 """
 
 from __future__ import annotations
@@ -35,7 +36,7 @@ from core.video import libraries
 from core.video.quality_profile import save_named
 from database.video_database import VideoDatabase
 
-TV, TV_4K, ANIME = "/media/tv", "/media/tv-4k", "/media/anime"
+TV, TV_4K, ANIME, ANIME_4K = "/media/tv", "/media/tv-4k", "/media/anime", "/media/anime-4k"
 KIDS_TV, ARCHIVE = "/media/kids-tv", "/media/tv-archive"
 
 GENRES: dict = {}   # tmdb id -> genres tmdb would give
@@ -61,16 +62,19 @@ def no_network(monkeypatch):
     videoapi._video_db = None
 
 
-def _world(tmp_path, *, anime_folder, tv_4k=False, kids_rule=False, archive_default=False):
-    """an install: tv, the anime folder (or not), tv 4k on (or off), a kids
-    tv library with a genre rule, a tv archive library made the default.
-    both servers list the same two show libraries, anime ticked as anime."""
+def _world(tmp_path, *, anime_folder, tv_4k=False, kids_rule=False, archive_default=False, anime_4k=False):
+    """an install: tv, the anime folder (or not), tv 4k on (or off), anime 4k
+    on (or off), a kids tv library with a genre rule, a tv archive library
+    made the default. both servers list the same two show libraries, anime
+    ticked as anime."""
     db = VideoDatabase(database_path=str(tmp_path / "video_library.db"))
     db.set_setting("movies_path", "/media/movies")
     db.set_setting("tv_path", TV)
     db.set_setting("anime_path", ANIME if anime_folder else "")
     db.set_setting("tv_4k_path", TV_4K)
     db.set_setting("tv_4k_enabled", "1" if tv_4k else "0")
+    db.set_setting("anime_4k_path", ANIME_4K)
+    db.set_setting("anime_4k_enabled", "1" if anime_4k else "0")
     for server in ("plex", "jellyfin"):
         db.set_library_selection(server, "Movies", "TV Shows", tv_more=["Anime"], anime=["Anime"])
     ids = {"uhd": save_named(db, None, "UHD", {"library": "4k"})["id"]}
@@ -80,7 +84,8 @@ def _world(tmp_path, *, anime_folder, tv_4k=False, kids_rule=False, archive_defa
     if archive_default:
         ids["archive"] = libraries.create_library(db, {"kind": "show", "name": "TV Archive", "path": ARCHIVE,
                                                        "is_default": True})["id"]
-    ids["tv"] = next(x["id"] for x in libraries.list_libraries(db, "show") if x["builtin"] == "main")
+    builtin = {x["builtin"]: x["id"] for x in libraries.list_libraries(db, "show") if x["builtin"]}
+    ids.update(tv=builtin["main"], anime=builtin["anime"], anime4k=builtin["anime4k"])
     videoapi._video_db = db
     return db, ids
 
@@ -119,7 +124,8 @@ def _routes(db, tmdb, *, pick=None):
     pick_lib = vpw._default_pick_library(dict(item), "episode", lambda: vpw._default_profile_library(item))
     folder = vpw.item_target_dir(dict(item), "episode", TV, db.get_setting("anime_path") or "",
                                  vpw._default_four_k_dir("episode"), vpw._default_route_type,
-                                 vpw._default_profile_library, vpw._default_pick_library)
+                                 vpw._default_profile_library, vpw._default_pick_library,
+                                 anime_4k_root=vpw._default_anime_4k_dir("episode"))
     out["drain"] = (folder, pick_lib and pick_lib["name"], pick_lib and pick_lib["why"])
     # wishlist search now: the same row, through grab_target_dir
     out["search"] = (vpw.grab_target_dir(dict(item), "episode", TV), out["drain"][1], out["drain"][2])
@@ -140,10 +146,10 @@ def _routes(db, tmdb, *, pick=None):
 
 W = dict  # readability
 
-# today an anime show's settings come from the tv side: the file goes to the
-# anime folder, the library named here is the one its profile, indexers,
-# sources, category and automatic search are read from
-SETTINGS_FROM_TV_SIDE = {6, 7, 8, 9, 10, 13}
+# before the anime library these rows filed in the anime folder but took
+# their profile, indexers, sources, category and automatic search from
+# (6, 8) TV, (7, 9) TV Archive, (10) TV 4K, (13) Kids TV
+WAS_SETTINGS_FROM_TV_SIDE = {6, 7, 8, 9, 10, 13}
 
 ROWS = [
     # with an anime folder
@@ -152,14 +158,14 @@ ROWS = [
     (3, W(anime_folder=True), W(anime=False, profile_4k=True), (TV, "TV", "default")),
     (4, W(anime_folder=True, archive_default=True), W(anime=False, profile_4k=True), (ARCHIVE, "TV Archive", "default")),
     (5, W(anime_folder=True, tv_4k=True), W(anime=False, profile_4k=True), (TV_4K, "TV 4K", "profile")),
-    (6, W(anime_folder=True), W(anime=True), (ANIME, "TV", "default")),
-    (7, W(anime_folder=True, archive_default=True), W(anime=True), (ANIME, "TV Archive", "default")),
-    (8, W(anime_folder=True), W(anime=True, profile_4k=True), (ANIME, "TV", "default")),
-    (9, W(anime_folder=True, archive_default=True), W(anime=True, profile_4k=True), (ANIME, "TV Archive", "default")),
-    (10, W(anime_folder=True, tv_4k=True), W(anime=True, profile_4k=True), (ANIME, "TV 4K", "profile")),
+    (6, W(anime_folder=True), W(anime=True), (ANIME, "Anime", "anime")),
+    (7, W(anime_folder=True, archive_default=True), W(anime=True), (ANIME, "Anime", "anime")),
+    (8, W(anime_folder=True), W(anime=True, profile_4k=True), (ANIME, "Anime", "anime")),
+    (9, W(anime_folder=True, archive_default=True), W(anime=True, profile_4k=True), (ANIME, "Anime", "anime")),
+    (10, W(anime_folder=True, tv_4k=True), W(anime=True, profile_4k=True), (ANIME, "Anime", "anime")),
     (11, W(anime_folder=True), W(anime=True, assign="tv"), (TV, "TV", "assigned")),
     (12, W(anime_folder=True, kids_rule=True), W(anime=False, genres=["Kids"]), (KIDS_TV, "Kids TV", "rule: genre Kids")),
-    (13, W(anime_folder=True, kids_rule=True), W(anime=True, genres=["Kids"]), (ANIME, "Kids TV", "rule: genre Kids")),
+    (13, W(anime_folder=True, kids_rule=True), W(anime=True, genres=["Kids"]), (ANIME, "Anime", "anime")),
     (14, W(anime_folder=True, kids_rule=True), W(anime=True, pick="kids"), (KIDS_TV, "Kids TV", "picked")),
     (15, W(anime_folder=True, kids_rule=True), W(anime=True, assign="kids"), (KIDS_TV, "Kids TV", "assigned")),
     # without an anime folder: anime is filed like any show
@@ -178,47 +184,67 @@ ROWS = [
     (28, W(anime_folder=False, kids_rule=True), W(anime=True, genres=["Kids"]), (KIDS_TV, "Kids TV", "rule: genre Kids")),
     (29, W(anime_folder=False, kids_rule=True), W(anime=True, pick="kids"), (KIDS_TV, "Kids TV", "picked")),
     (30, W(anime_folder=False, kids_rule=True), W(anime=True, assign="kids"), (KIDS_TV, "Kids TV", "assigned")),
+    # anime 4k switched on: only an anime show on a 4k profile moves
+    (31, W(anime_folder=True, anime_4k=True), W(anime=True), (ANIME, "Anime", "anime")),
+    (32, W(anime_folder=True, anime_4k=True), W(anime=True, profile_4k=True), (ANIME_4K, "Anime 4K", "anime")),
+    (33, W(anime_folder=True, anime_4k=True), W(anime=False, profile_4k=True), (TV, "TV", "default")),
+    (33.1, W(anime_folder=True, anime_4k=True, tv_4k=True), W(anime=False, profile_4k=True), (TV_4K, "TV 4K", "profile")),
+    (34, W(anime_folder=True), W(anime=False, assign="anime"), (ANIME, "Anime", "assigned")),
+    (34.1, W(anime_folder=True), W(anime=False, pick="anime"), (ANIME, "Anime", "picked")),
+    (35, W(anime_folder=True, anime_4k=True), W(anime=False, assign="anime4k"), (ANIME_4K, "Anime 4K", "assigned")),
+    (35.1, W(anime_folder=True, anime_4k=True), W(anime=True, pick="anime4k"), (ANIME_4K, "Anime 4K", "picked")),
+    # anime 4k on without an anime folder: no anime library, anime files as before (L3)
+    (35.2, W(anime_folder=False, anime_4k=True, tv_4k=True), W(anime=True, profile_4k=True), (TV_4K, "TV 4K", "profile")),
 ]
 
 
 @pytest.mark.parametrize("mark", ["hint", "plex", "jellyfin"])
-@pytest.mark.parametrize("row,world,show,want", ROWS, ids=["row%02d" % r[0] for r in ROWS])
+@pytest.mark.parametrize("row,world,show,want", ROWS, ids=["row%04.1f" % r[0] for r in ROWS])
 def test_every_path_files_and_reads_settings_like_the_table(tmp_path, mark, row, world, show, want):
     db, ids = _world(tmp_path, **world)
     show = dict(show)
     pick = show.pop("pick", None)
-    _show(db, ids, 500 + row, mark=mark, **show)
-    got = _routes(db, 500 + row, pick=ids[pick] if pick else None)
+    tmdb = 500 + int(row * 10)
+    _show(db, ids, tmdb, mark=mark, **show)
+    got = _routes(db, tmdb, pick=ids[pick] if pick else None)
     for path, outcome in got.items():
-        assert outcome == want, "row %d, %s, %s path: %r != %r" % (row, mark, path, outcome, want)
+        assert outcome == want, "row %s, %s, %s path: %r != %r" % (row, mark, path, outcome, want)
 
 
-# ── the settings an anime show actually uses today (F3) ──────────────────────
+# ── the settings an anime show uses (F3) ──────────────────────────────────────
 
 @pytest.mark.parametrize("mark", ["hint", "plex", "jellyfin"])
-def test_an_anime_show_takes_every_library_setting_from_tv(tmp_path, mark):
-    """files in the anime folder, searches and grabs with tv's settings"""
+def test_an_anime_show_takes_every_library_setting_from_the_anime_library(tmp_path, mark):
+    """files in the anime folder and searches and grabs with the Anime
+    library's settings; tv's settings no longer reach it"""
     db, ids = _world(tmp_path, anime_folder=True)
     tv_profile = save_named(db, None, "TV 1080p", {"library": "main"})["id"]
+    anime_profile = save_named(db, None, "Anime 1080p", {"library": "main"})["id"]
     libraries.update_library(db, ids["tv"], {"options": {
         "quality_profile_id": tv_profile, "sources": ["usenet"], "indexer_ids": [7],
         "torrent_category": "tv", "usenet_category": "tv", "auto_search": False, "upgrades": False}})
+    libraries.update_library(db, ids["anime"], {"options": {
+        "quality_profile_id": anime_profile, "sources": ["torrent"], "indexer_ids": [9],
+        "torrent_category": "anime", "usenet_category": "anime"}})
     _show(db, ids, 700, anime=True, mark=mark)
-    assert _routes(db, 700)["drain"][0] == ANIME
-    assert libraries.default_profile_for(db, "show", tmdb_id=700) == tv_profile
+    assert _routes(db, 700)["drain"] == (ANIME, "Anime", "anime")
+    assert libraries.default_profile_for(db, "show", tmdb_id=700) == anime_profile
     item = dict(next(r for r in db.episode_wishlist_to_download(due_only=False) if r["show_tmdb_id"] == 700))
-    assert vpw.item_indexer_ids(dict(item), "episode") == [7]
-    assert vpw.item_source_chain(dict(item), "episode", ["torrent", "usenet"]) == ["usenet"]
+    assert vpw.item_indexer_ids(dict(item), "episode") == [9]
+    assert vpw.item_source_chain(dict(item), "episode", ["torrent", "usenet"]) == ["torrent"]
     assert vpw.library_allows(dict(item), "episode", vpw._default_pick_library,
-                              vpw._default_profile_library) is False
-    # the category is read from the FOLDER: the anime folder is in no library
-    assert libraries.client_category(db, ANIME, "usenet") is None
+                              vpw._default_profile_library) is True
+    # the category is read from the folder: the anime folder is the Anime library's
+    assert libraries.client_category(db, ANIME, "usenet") == "anime"
     assert libraries.client_category(db, TV, "usenet") == "tv"
+    # a show of another type keeps tv's
+    _show(db, ids, 701, anime=False, mark=mark)
+    assert libraries.default_profile_for(db, "show", tmdb_id=701) == tv_profile
 
 
-def test_an_anime_show_in_the_anime_folder_is_in_no_library_after_a_scan(tmp_path):
+def test_an_anime_show_in_the_anime_folder_is_in_the_anime_library_after_a_scan(tmp_path):
     """attribute_files stamps a show with the library its files sit in: a tv
-    show gets tv, an anime show in the anime folder gets none"""
+    show gets tv, an anime show in the anime folder gets Anime"""
     db, ids = _world(tmp_path, anime_folder=True)
     for tmdb, lib, folder in ((209867, "Anime", ANIME + "/Frieren (2023)"), (95396, "TV Shows", TV + "/Severance (2022)")):
         _show(db, ids, tmdb, anime=lib == "Anime", mark="plex")
@@ -237,19 +263,21 @@ def test_an_anime_show_in_the_anime_folder_is_in_no_library_after_a_scan(tmp_pat
         got = dict(conn.execute("SELECT tmdb_id, video_library_id FROM shows").fetchall())
     finally:
         conn.close()
-    assert got == {209867: None, 95396: ids["tv"]}
+    assert got == {209867: ids["anime"], 95396: ids["tv"]}
 
 
 # ── how the type is known (F4, L2's three cases) ─────────────────────────────
 
-def test_a_never_seen_anime_show_files_anime_but_takes_tv_settings_on_its_first_grab(tmp_path, monkeypatch):
-    """the get path asks tmdb for the hint AFTER the library is chosen"""
+def test_a_never_seen_anime_show_takes_the_anime_library_on_its_first_grab(tmp_path, monkeypatch):
+    """the type is worked out (tmdb asked once) before the library is chosen,
+    so the search's settings and the grab's folder agree from the first grab"""
     import core.video.anime_hint as ah
     db, ids = _world(tmp_path, anime_folder=True)
     asked = []
     monkeypatch.setattr(ah, "default_suggest", lambda t: asked.append(t) or True)
     got = _routes(db, 800)
-    assert got["get"] == (ANIME, "TV", "default")
+    assert got["get"] == (ANIME, "Anime", "anime")
+    assert got["drain"] == got["repair"] == (ANIME, "Anime", "anime")
     assert asked == [800]
 
 
@@ -265,7 +293,18 @@ def test_a_library_show_with_no_tmdb_id_is_judged_by_its_own_row(tmp_path):
     body = {"media_source": "plex", "media_id": row_id, "title": "Obscure OVA"}
     assert dl._target_for(db, "show", body) == ANIME
     lib = dl._library_for(db, "show", body)
-    assert (lib["name"], lib["why"]) == ("TV", "default")
+    assert (lib["name"], lib["why"]) == ("Anime", "anime")
+
+
+def test_a_get_naming_the_show_by_tmdb_id_alone_files_where_its_library_says(tmp_path):
+    """a body with tmdb_id but no media_id: the library still knows the stored
+    type, and the folder follows the library (L6), never TV under Anime's settings"""
+    db, ids = _world(tmp_path, anime_folder=True)
+    db.set_show_type_hint(801, "anime", source="user")
+    body = {"tmdb_id": 801, "title": "Show 801"}
+    lib = dl._library_for(db, "show", body)
+    assert (lib["name"], lib["why"]) == ("Anime", "anime")
+    assert dl._target_for(db, "show", body) == ANIME
 
 
 # ── a show re-keyed to the other server (F9) ─────────────────────────────────
@@ -316,5 +355,54 @@ def test_unreadable_libraries_fall_back_on_the_wishlist_side_and_fail_a_get(
 
 def test_the_table_rows_are_numbered_once():
     nums = [r[0] for r in ROWS]
-    assert nums == sorted(set(nums)) and SETTINGS_FROM_TV_SIDE <= set(nums)
+    assert nums == sorted(set(nums)) and WAS_SETTINGS_FROM_TV_SIDE <= set(nums)
     assert json.dumps(ROWS)   # plain data, easy to diff when a row changes
+
+
+# ── an anime library has no rules and is never the default (L4, L5) ───────────
+
+def test_rules_on_an_anime_library_are_never_kept_or_used(tmp_path):
+    db, ids = _world(tmp_path, anime_folder=True)
+    lib = libraries.update_library(db, ids["anime"], {"rules": {"genres": ["Animation"]}, "indexer_ids": [3]})
+    assert lib["rules"] == {"genres": [], "keywords": []} and lib["options"]["indexer_ids"] == [3]
+    # a rule slipped into the row by hand still sends no standard show there
+    conn = db._get_connection()
+    try:
+        conn.execute("UPDATE video_libraries SET options=? WHERE id=?",
+                     (json.dumps({"rules": {"genres": ["Animation"]}}), ids["anime"]))
+        conn.commit()
+    finally:
+        conn.close()
+    _show(db, ids, 1000, anime=False, mark="plex", genres=["Animation"])
+    assert _routes(db, 1000)["get"] == (TV, "TV", "default")
+
+
+def test_an_anime_library_can_never_be_the_default(tmp_path):
+    db, ids = _world(tmp_path, anime_folder=True, anime_4k=True)
+    for key in ("anime", "anime4k"):
+        with pytest.raises(ValueError, match="anime shows only"):
+            libraries.set_default(db, ids[key])
+    # one made default in the row by hand is still passed over for a new show
+    conn = db._get_connection()
+    try:
+        conn.execute("UPDATE video_libraries SET is_default = (id = ?) WHERE kind='show'", (ids["anime"],))
+        conn.commit()
+    finally:
+        conn.close()
+    _show(db, ids, 1001, anime=False, mark="plex")
+    assert _routes(db, 1001)["get"] == (TV, "TV", "default")
+
+
+def test_no_anime_folder_means_no_anime_library(tmp_path):
+    db, ids = _world(tmp_path, anime_folder=False, anime_4k=True)
+    libs = {x["builtin"]: x for x in libraries.list_libraries(db, "show") if x["builtin"]}
+    assert libs["anime"]["usable"] is False and libs["anime"]["path"] == ""
+    assert [x["builtin"] for x in libraries.list_libraries(db, "show")][:4] == ["main", "4k", "anime", "anime4k"]
+    # no anime folder, no Anime 4K either: its own switch and folder don't make it usable
+    assert libs["anime4k"]["usable"] is False and libs["anime4k"]["path"] == ANIME_4K
+    # so even a hand pick can't file a show there
+    _show(db, ids, 960, anime=True, mark="hint", profile_4k=True)
+    got = _routes(db, 960, pick=ids["anime4k"])["get"]
+    assert got[1] != "Anime 4K" and got[0] != ANIME_4K
+    libraries.assign_title(db, "show", 960, ids["anime4k"])
+    assert all(r[1] != "Anime 4K" and r[0] != ANIME_4K for r in _routes(db, 960).values())

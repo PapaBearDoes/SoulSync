@@ -185,7 +185,8 @@ def _configured_roles(db) -> List[tuple]:
         v = str(db.get_setting(key) or "").strip()
         if v:
             roles.append((v, label))
-    for kind, label in (("movie", "your 4K movies folder"), ("episode", "your 4K TV folder")):
+    for kind, label in (("movie", "your 4K movies folder"), ("episode", "your 4K TV folder"),
+                        ("anime", "your 4K anime folder")):
         v = four_k_path(db, kind)
         if v:
             roles.append((v, label))

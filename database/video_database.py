@@ -6067,9 +6067,11 @@ class VideoDatabase:
             conn.execute(f"INSERT OR IGNORE INTO {link_table} ({owner_col}, {ref_fk}) VALUES (?, ?)",
                          (owner_id, rid))
 
-    # the main and 4K folders as library rows (#2029): kind, builtin, name
+    # the main and 4K folders as library rows (#2029): kind, builtin, name;
+    # the anime folder and its 4K sibling are TV libraries too
     _BUILTIN_LIBRARIES = (("movie", "main", "Movies", 0), ("movie", "4k", "Movies 4K", 1),
-                          ("show", "main", "TV", 0), ("show", "4k", "TV 4K", 1))
+                          ("show", "main", "TV", 0), ("show", "4k", "TV 4K", 1),
+                          ("show", "anime", "Anime", 2), ("show", "anime4k", "Anime 4K", 3))
 
     @classmethod
     def _seed_builtin_libraries(cls, conn) -> None:

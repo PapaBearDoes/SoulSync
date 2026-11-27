@@ -296,7 +296,7 @@ def _library_roots() -> set:
             if v:
                 roots.add(os.path.abspath(str(v)))
         from core.video.library_roots import custom_library_paths, four_k_path
-        for kind in ("movie", "episode"):
+        for kind in ("movie", "episode", "anime"):
             v = four_k_path(db, kind)
             if v:
                 roots.add(os.path.abspath(v))
@@ -334,7 +334,7 @@ def _sweep_import_temps(db) -> int:
             roots.add(os.path.abspath(str(v)))
     try:
         from core.video.library_roots import custom_library_paths, four_k_path
-        for kind in ("movie", "episode"):
+        for kind in ("movie", "episode", "anime"):
             v = four_k_path(db, kind)
             if v:
                 roots.add(os.path.abspath(v))

@@ -112,18 +112,24 @@ def _title_tmdb_for(db, kind, body):
         return None
 
 
-def _library_for(db, kind, body):
+def _library_for(db, kind, body, series_type=None):
     """The video library (#2029) a download of this title files into, or None
-    for youtube / an unknown kind. See core.video.libraries.choose."""
+    for youtube / an unknown kind. ``series_type``: the show's routing type
+    when the caller has worked it out; else it is worked out here the way the
+    folder is (_series_type_for), only while the anime library is in use, so
+    the search's indexers and the grab's folder agree for a show new to
+    SoulSync too. See core.video.libraries.choose."""
     from core.video.libraries import choose, kind_of
     k = kind_of(kind)
     if not k:
         return None
     body = body or {}
+    if series_type is None and k == "show":
+        series_type = lambda: _series_type_for(db, kind, body)  # noqa: E731 - asked lazily by choose
     return choose(db, k, tmdb_id=_title_tmdb_for(db, k, body),
                   explicit_id=body.get("video_library_id"),
                   profile_library=lambda: _profile_library_for(db, kind, body),
-                  title=body.get("title"))
+                  title=body.get("title"), series_type=series_type)
 
 
 def _title_library_info(db, kind, src) -> dict:
@@ -188,23 +194,28 @@ def _annotate_libraries(db, rows) -> None:
 
 def _target_for(db, kind, body) -> str:
     """The library folder a download of this title is filed in: a library
-    picked for the title by hand, else the anime folder by the show's routing
-    type, else its library by the 4K profile, the rules or the default
-    (#2029; the main and 4K folders are libraries too)."""
+    picked for the title by hand, else the anime library by the show's
+    routing type, else its library by the 4K profile, the rules or the
+    default (#2029; the main, 4K and anime folders are libraries too).
+    The type is worked out first, so a show new to SoulSync has its hint
+    before the library is chosen."""
     from core.video.download_pipeline import target_dir_for
+    from core.video.libraries import ANIME_BUILTINS
     from core.video.library_roots import output_paths
-    lib = _library_for(db, kind, body)
+    series_type = _series_type_for(db, kind, body)
+    lib = _library_for(db, kind, body, series_type=series_type)
     if lib and lib.get("why") in ("picked", "assigned") and lib.get("path"):
         return lib["path"]
     paths = output_paths(db)
-    series_type = _series_type_for(db, kind, body)
     if lib and not lib.get("builtin") and lib.get("path"):
         anime = str(paths.get("anime_path") or "").strip()
         if lib["kind"] == "show" and anime and str(series_type or "").strip().lower() == "anime":
             return anime
         return lib["path"]
+    if lib and lib.get("builtin") in ANIME_BUILTINS:
+        series_type = "anime"   # the anime library chose it: file by the anime folders
     return target_dir_for(kind, paths, series_type,
-                          "4k" if lib and lib.get("builtin") == "4k" else
+                          "4k" if lib and lib.get("builtin") in ("4k", "anime4k") else
                           ("main" if lib else _profile_library_for(db, kind, body)))
 
 

@@ -254,6 +254,7 @@ def _rss_pass_inner(*, fetch, log, extto=None) -> Dict[str, Any]:
         # send every episode to the TV folder, anime included)
         anime_root = vpw._default_anime_dir() if media_type == "episode" else ""
         four_k_root = vpw._default_four_k_dir(media_type)
+        anime_4k_root = vpw._default_anime_4k_dir(media_type)
         for item in items:
             if vpw.item_key(item, media_type) in active:
                 continue
@@ -279,7 +280,7 @@ def _rss_pass_inner(*, fetch, log, extto=None) -> Dict[str, Any]:
                 continue
             folder = vpw.item_target_dir(item, media_type, target, anime_root, four_k_root,
                                          vpw._default_route_type, vpw._default_profile_library,
-                                         vpw._default_pick_library)
+                                         vpw._default_pick_library, anime_4k_root=anime_4k_root)
             if vpw._default_enqueue(item, best, cands, media_type, folder):
                 grabbed += 1
                 active.add(vpw.item_key(item, media_type))

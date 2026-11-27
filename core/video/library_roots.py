@@ -1,12 +1,13 @@
 """Configured video libraries; additional roots never change import destinations.
 
-The optional 4K libraries (``movies_4k_path`` / ``tv_4k_path``) DO: a title on a
-quality profile that saves to the 4K library imports there. Each is off until
-its switch (``movies_4k_enabled`` / ``tv_4k_enabled``) is on and a folder is
-set, and a switched-off 4K folder is invisible everywhere (routing, scanning,
-the monitor's roots), so turning it off is a clean undo. Custom libraries
-(#2029, core.video.libraries) are the same: their folders count as library
-folders while they're switched on."""
+The optional 4K libraries (``movies_4k_path`` / ``tv_4k_path``, and
+``anime_4k_path`` beside the anime folder) DO: a title on a quality profile
+that saves to the 4K library imports there. Each is off until its switch
+(``movies_4k_enabled`` / ``tv_4k_enabled`` / ``anime_4k_enabled``) is on and
+a folder is set, and a switched-off 4K folder is invisible everywhere
+(routing, scanning, the monitor's roots), so turning it off is a clean undo.
+Custom libraries (#2029, core.video.libraries) are the same: their folders
+count as library folders while they're switched on."""
 import json
 import os
 
@@ -49,9 +50,11 @@ def home_paths(db):
     return additional_paths(db, HOME_KEY)
 
 
-# kind -> (switch, folder) for the optional 4K libraries
+# kind -> (switch, folder) for the optional 4K libraries ('anime': the anime
+# folder's 4K sibling, for anime shows on a 4K profile)
 FOUR_K_KEYS = {"movie": ("movies_4k_enabled", "movies_4k_path"),
-               "episode": ("tv_4k_enabled", "tv_4k_path")}
+               "episode": ("tv_4k_enabled", "tv_4k_path"),
+               "anime": ("anime_4k_enabled", "anime_4k_path")}
 
 
 def _on(value):
@@ -59,9 +62,13 @@ def _on(value):
 
 
 def four_k_path(db, kind):
-    """The 4K library folder for 'movie' or 'episode', or '' while it's off."""
+    """The 4K library folder for 'movie', 'episode' or 'anime', or '' while
+    it's off. Anime 4K is the anime folder's sibling: off while no anime
+    folder is set."""
     keys = FOUR_K_KEYS.get(kind)
     if not keys:
+        return ""
+    if kind == "anime" and not str(db.get_setting("anime_path") or "").strip():
         return ""
     enabled, folder = keys
     path = str(db.get_setting(folder) or "").strip()
@@ -78,6 +85,7 @@ def output_paths(db):
         out["movies_path"] = str(db.get_setting("transfer_path") or "")
     out["movies_4k_path"] = four_k_path(db, "movie")
     out["tv_4k_path"] = four_k_path(db, "episode")
+    out["anime_4k_path"] = four_k_path(db, "anime")
     return out
 
 
@@ -127,6 +135,9 @@ def library_roots(db, kind=None):
             anime = db.get_setting("anime_path")
             if anime:
                 roots.append(str(anime))
+            anime_4k = four_k_path(db, "anime")
+            if anime_4k:
+                roots.append(anime_4k)
         if item != "youtube":
             roots.extend(additional_paths(db, key.replace("_path", "_additional_paths")))
             # the server's library folders SoulSync was told how to reach

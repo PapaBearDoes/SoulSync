@@ -806,6 +806,19 @@ def _default_four_k_dir(media_type: str) -> str:
         return ""
 
 
+def _default_anime_4k_dir(media_type: str) -> str:
+    """The Anime 4K library ('' while it's switched off, and for movies).
+    Best-effort: an unreadable setting reads as off, never stalls the drain."""
+    if media_type == "movie":
+        return ""
+    try:
+        from api.video import get_video_db
+        from core.video.library_roots import four_k_path
+        return four_k_path(get_video_db(), "anime")
+    except Exception:   # noqa: BLE001 - routing falls back to the anime folder
+        return ""
+
+
 def _default_profile_library(item: Dict[str, Any]) -> str:
     """Which library the item's quality profile files it in ('main' / '4k')."""
     try:
@@ -819,9 +832,10 @@ def _default_profile_library(item: Dict[str, Any]) -> str:
 def _default_pick_library(item: Dict[str, Any], media_type: str,
                           profile_library: Callable[[], str]) -> Optional[Dict[str, Any]]:
     """The video library (#2029) a wished item files into: picked for its
-    row, picked for the title, the 4K one by its profile, the rules, the
-    default (core.video.libraries.choose). None when it can't be read, which
-    routes the way it did before libraries existed."""
+    row, picked for the title, the anime one by its show's type, the 4K one
+    by its profile, the rules, the default (core.video.libraries.choose).
+    None when it can't be read, which routes the way it did before libraries
+    existed."""
     try:
         from api.video import get_video_db
         from core.video.libraries import choose
@@ -829,8 +843,11 @@ def _default_pick_library(item: Dict[str, Any], media_type: str,
         kind = "movie" if media_type == "movie" else "show"
         tmdb = item.get("tmdb_id") if media_type == "movie" else item.get("show_tmdb_id")
         title = item.get("title") if media_type == "movie" else (item.get("show_title") or item.get("title"))
+        # an episode's show type, the way its folder is decided (only read
+        # while the anime library is in use)
+        series_type = (lambda: _routing_type_for(item)) if media_type == "episode" else None
         lib = choose(db, kind, tmdb_id=tmdb, explicit_id=item.get("video_library_id"),
-                     profile_library=profile_library, title=title)
+                     profile_library=profile_library, title=title, series_type=series_type)
         if lib and tmdb and not item.get("video_library_id"):
             # where the title's own wish files into, for the wanted list's
             # library filter (a no-op write when nothing moved)
@@ -841,45 +858,71 @@ def _default_pick_library(item: Dict[str, Any], media_type: str,
         return None
 
 
-def _library_dir(lib: Dict[str, Any], root: str, four_k_root: str) -> str:
-    """The folder of a chosen library: the main one is the caller's root and
-    the 4K one its 4K root (so a caller's own folders win), a custom one its
-    own folder."""
+def _library_dir(lib: Dict[str, Any], root: str, four_k_root: str,
+                 anime_root: str = "", anime_4k_root: str = "") -> str:
+    """The folder of a chosen library: the main one is the caller's root, the
+    4K one its 4K root and the anime ones its anime roots (so a caller's own
+    folders win), a custom one its own folder."""
     if lib.get("builtin") == "main":
         return root
     if lib.get("builtin") == "4k":
         return four_k_root or root
+    if lib.get("builtin") == "anime":
+        return anime_root or root
+    if lib.get("builtin") == "anime4k":
+        return anime_4k_root or anime_root or root
     return str(lib.get("path") or "") or root
 
 
 def item_target_dir(item: Dict[str, Any], media_type: str, root: str, anime_root: str,
                     four_k_root: str, route_type: Callable[[Dict[str, Any]], Optional[str]],
                     profile_library: Callable[[Dict[str, Any]], str],
-                    pick_library: Optional[Callable[..., Optional[Dict[str, Any]]]] = None) -> str:
+                    pick_library: Optional[Callable[..., Optional[Dict[str, Any]]]] = None,
+                    anime_4k_root: str = "") -> str:
     """The folder ONE wished item is filed in. A library picked for the item
-    or its title by hand; else the anime folder by the show's routing type
-    (never the genre tag); else its library (#2029: the 4K one when its
-    quality profile says 4K and that library is on, a library whose rules
-    match, the default one); else the main folder. The profile is only read
-    while the 4K folder is set. Shared by the drain and RSS sync so both
-    route the same way. Without ``pick_library`` it routes the way it did
-    before libraries existed."""
+    or its title by hand; else the anime library by the show's routing type
+    (never the genre tag; Anime 4K when its quality profile says 4K and that
+    library is on); else its library (#2029: the 4K one when its quality
+    profile says 4K and that library is on, a library whose rules match, the
+    default one); else the main folder. The profile is only read while a 4K
+    folder is set. Shared by the drain and RSS sync so both route the same
+    way. Without ``pick_library`` it routes the way it did before libraries
+    existed: the anime folder (``anime_4k_root`` by the profile), else the 4K
+    folder, else the main one."""
+    from core.video.libraries import ANIME_BUILTINS
+
     def profile():
-        return profile_library(item) if four_k_root else "main"
+        return profile_library(item) if four_k_root or anime_4k_root else "main"
 
     lib = pick_library(item, media_type, profile) if pick_library else None
-    if lib and lib.get("why") in ("picked", "assigned"):
-        return _library_dir(lib, root, four_k_root)
+    if lib and (lib.get("why") in ("picked", "assigned") or lib.get("builtin") in ANIME_BUILTINS):
+        return _library_dir(lib, root, four_k_root, anime_root, anime_4k_root)
     if media_type == "episode" and anime_root:
         from core.video.download_pipeline import tv_root_for
         anime = tv_root_for(route_type(item), "", anime_root)
-        if anime:
+        # the library decides while an anime library is in use; this is the
+        # way it routed before (no library could be read, or no anime folder)
+        if anime and not (lib and _anime_library_in_use()):
+            if anime_4k_root and profile_library(item) == "4k":
+                return anime_4k_root
             return anime
     if lib:
         return _library_dir(lib, root, four_k_root)
     if four_k_root and profile_library(item) == "4k":
         return four_k_root
     return root
+
+
+def _anime_library_in_use() -> bool:
+    """an anime library has a folder: then the library choice files anime,
+    and the anime folder check above stays out of it. Best-effort: False
+    when it can't be read (routes as before)."""
+    try:
+        from api.video import get_video_db
+        from core.video.libraries import list_libraries
+        return any(x["builtin"] == "anime" and x["usable"] for x in list_libraries(get_video_db(), "show"))
+    except Exception:   # noqa: BLE001 - routes the way it did before libraries
+        return False
 
 
 def _default_anime_dir() -> str:
@@ -924,7 +967,7 @@ def grab_target_dir(item: Dict[str, Any], media_type: str, root: str) -> str:
     return item_target_dir(item, media_type, root, anime_root,
                            _default_four_k_dir(media_type),
                            _routing_type_for, _default_profile_library,
-                           _default_pick_library)
+                           _default_pick_library, anime_4k_root=_default_anime_4k_dir(media_type))
 
 
 def _extto_hits_for_context(ctx: Dict[str, Any]) -> tuple:
@@ -1361,6 +1404,7 @@ def auto_video_process_wishlist(
     target_dir: Optional[Callable[[str], str]] = None,
     anime_dir: Optional[Callable[[], str]] = None,
     four_k_dir: Optional[Callable[[str], str]] = None,
+    anime_4k_dir: Optional[Callable[[str], str]] = None,
     route_type: Optional[Callable[[Dict[str, Any]], Optional[str]]] = None,
     profile_library: Optional[Callable[[Dict[str, Any]], str]] = None,
     pick_library: Optional[Callable[..., Optional[Dict[str, Any]]]] = None,
@@ -1390,6 +1434,7 @@ def auto_video_process_wishlist(
     target_dir = target_dir or _default_target_dir
     anime_dir = anime_dir or _default_anime_dir
     four_k_dir = four_k_dir or _default_four_k_dir
+    anime_4k_dir = anime_4k_dir or _default_anime_4k_dir
     route_type = route_type or _default_route_type
     profile_library = profile_library or _default_profile_library
     search = search or _default_search
@@ -1422,6 +1467,7 @@ def auto_video_process_wishlist(
         # each wished episode carries its show's routing type (route_series_type)
         anime_root = anime_dir() if media_type == 'episode' else ''
         four_k_root = four_k_dir(media_type)
+        anime_4k_root = anime_4k_dir(media_type)
         if not root:
             where = 'Movie' if media_type == 'movie' else 'TV'
             deps.update_progress(automation_id, status='finished', progress=100, phase='Complete',
@@ -1551,7 +1597,8 @@ def auto_video_process_wishlist(
                         out = enqueue_outcome(enqueue(
                             it, cand, cands, media_type,
                             item_target_dir(it, media_type, root, anime_root, four_k_root,
-                                            route_type, profile_library, pick_library)))
+                                            route_type, profile_library, pick_library,
+                                            anime_4k_root=anime_4k_root)))
                         if out["ok"]:
                             clear_source_refusal(it, media_type, cand)
                             ok = True
