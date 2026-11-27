@@ -1023,6 +1023,13 @@ class VideoDatabase:
         finally:
             conn.close()
         self._drop_legacy_id_uniques()
+        # an anime folder already set: its library starts with the settings
+        # anime was using (once; core.video.libraries.copy_anime_settings)
+        try:
+            from core.video.libraries import copy_anime_settings
+            copy_anime_settings(self)
+        except Exception:   # noqa: BLE001 - never blocks startup
+            logger.exception("anime library settings copy failed at start")
 
     # Inline UNIQUEs older databases carry on an external id. A server can list
     # one series as several items (Boulder's had "90 Day Fiancé: The Other Way"

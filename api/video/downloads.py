@@ -1141,6 +1141,10 @@ def register_routes(bp):
             from core.settings import config_manager
             config_manager.set(_SHARED_DOWNLOAD_KEY, (str(body.get("download_path") or "")).strip())
         save_source(db, body)         # download_mode + hybrid_order (validated)
+        # an anime library that just got its folder starts with the settings
+        # anime was using (once)
+        from core.video.libraries import copy_anime_settings
+        copy_anime_settings(db)
         return jsonify({"status": "saved"})
 
     # ── import lists (arr-parity P6). Nested under /downloads/config so the

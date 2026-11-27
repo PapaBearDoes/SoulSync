@@ -683,6 +683,57 @@ def folder_for(lib: Optional[Dict[str, Any]], fallback: str = "") -> str:
     return str((lib or {}).get("path") or "") or fallback
 
 
+# ── what the anime libraries start with ──────────────────────────────────────
+
+# one-time markers: each anime library takes its starting settings once, the
+# first time it has a folder; switched off and on again it keeps its own
+ANIME_COPY_MARKERS = {"anime": "anime_library_settings_copied",
+                      "anime4k": "anime4k_library_settings_copied"}
+# what anime used before it had a library of its own, the markers and chapter
+# pictures included (an anime file in no library took those from tv's).
+# Never the rules (an anime library has none) nor the client categories (an
+# anime download had none: the anime folder was in no library)
+_COPIED_OPTIONS = ("quality_profile_id", "sources", "indexer_ids", "auto_search", "upgrades",
+                   "chapter_thumbs", "markers", "markers_recaps", "markers_write")
+
+
+def copy_anime_settings(db) -> List[str]:
+    """Give each anime library the settings anime was using, once, the first
+    time it has a folder: Anime takes the TV default library's (TV, or the
+    custom library made the default), Anime 4K takes TV 4K's. After that they
+    are its own; changing TV never changes them. Returns the builtins copied.
+    Best-effort, never raises."""
+    done = []
+    try:
+        libs = list_libraries(db, "show")
+        by_builtin = {x["builtin"]: x for x in libs if x["builtin"]}
+        default = next((x for x in libs if x["usable"] and x["is_default"]
+                        and x["builtin"] not in ANIME_BUILTINS), None) or by_builtin.get("main")
+        sources = {"anime": default, "anime4k": by_builtin.get("4k")}
+        for builtin, marker in ANIME_COPY_MARKERS.items():
+            target = by_builtin.get(builtin)
+            if not target or not target["usable"] or str(db.get_setting(marker) or "") == "1":
+                continue
+            src = sources[builtin] or {}
+            opts = dict(target["options"])
+            for key in _COPIED_OPTIONS:
+                opts[key] = (src.get("options") or {}).get(key, opts.get(key))
+            opts = normalize_options(opts)
+            opts["rules"] = {"genres": [], "keywords": []}
+            conn = db.connect()
+            try:
+                conn.execute("UPDATE video_libraries SET options=? WHERE id=?", (json.dumps(opts), target["id"]))
+                conn.commit()
+            finally:
+                conn.close()
+            db.set_setting(marker, "1")
+            logger.info("%s library starts with %s's settings", target["name"], src.get("name") or "the defaults")
+            done.append(builtin)
+    except Exception:   # noqa: BLE001 - starts on the defaults, as a new library does
+        logger.exception("anime library settings could not be copied")
+    return done
+
+
 # ── per-library quality profile (#2029 step 2) ───────────────────────────────
 
 def default_profile_for(db, kind: Any, *, tmdb_id: Any = None, explicit_id: Any = None,
@@ -903,5 +954,5 @@ __all__ = ["KINDS", "kind_of", "normalize_options", "list_libraries", "get_libra
            "choose", "custom_folders", "library_for_path", "folder_for",
            "default_profile_for", "title_copies", "add_copy", "remove_copy", "attribute_files",
            "SOURCES", "library_of_folder", "client_category", "source_chain", "indexer_ids_for",
-           "allows_automatic", "ANIME_BUILTINS"]
+           "allows_automatic", "ANIME_BUILTINS", "ANIME_COPY_MARKERS", "copy_anime_settings"]
 
