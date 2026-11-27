@@ -61,6 +61,25 @@ def test_unreachable_root_is_an_error(db, tmp_path):
     assert c["id"] == "movies_path" and "unreachable" in c["detail"]
 
 
+def test_an_unreachable_anime_folder_is_an_error(db, tmp_path):
+    db.set_setting("anime_path", str(tmp_path / "not-mounted"))
+    h = collect(db)
+    assert h["status"] == "error"
+    c = h["checks"][0]
+    assert c["id"] == "anime_path" and c["label"] == "Anime library"
+    assert "unreachable" in c["detail"]
+
+
+def test_low_disk_on_the_anime_folder_warns(db, tmp_path, monkeypatch):
+    (tmp_path / "Anime").mkdir()
+    db.set_setting("anime_path", str(tmp_path / "Anime"))
+    monkeypatch.setattr("core.video.disk_guard.free_gb", lambda p: 1.2)
+    h = collect(db)
+    assert h["status"] == "warning"
+    assert h["checks"][0]["id"] == "anime_path_space"
+    assert "nearly full" in h["checks"][0]["detail"]
+
+
 def test_unset_roots_are_not_noise(db):
     h = collect(db)
     assert h["status"] == "ok"

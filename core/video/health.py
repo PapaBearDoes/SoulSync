@@ -17,7 +17,7 @@ from utils.logging_config import get_logger
 logger = get_logger("video.health")
 
 _ROOTS = (("movies_path", "Movie library"), ("tv_path", "TV library"),
-          ("youtube_path", "YouTube library"))
+          ("anime_path", "Anime library"), ("youtube_path", "YouTube library"))
 # the optional 4K libraries, checked only while switched on
 _FOUR_K_ROOTS = (("movie", "movies_4k_path", "4K movie library"),
                  ("episode", "tv_4k_path", "4K TV library"),
