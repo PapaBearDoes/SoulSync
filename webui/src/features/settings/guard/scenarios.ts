@@ -26,13 +26,19 @@ export const SCENARIOS: Scenario[] = [
   {
     name: 'jellyfin',
     side: 'music',
-    why: 'Jellyfin as the music server (its user and library pickers), and everything a switch elsewhere keeps locked: Spotify tags on, explicit tracks allowed, an admin PIN and password set, the per-indexer seeding rows loaded',
+    why: 'Jellyfin as the music server (its user and library pickers), and everything a switch elsewhere keeps locked: Spotify tags on, explicit tracks allowed, an admin PIN and password set, the per-indexer seeding rows loaded, an anime folder set (its 4K sibling)',
     settings: {
       active_media_server: 'jellyfin',
       spotify: { embed_tags: true },
       content_filter: { allow_explicit: true },
     },
-    endpoints: { '/api/profiles': securedProfiles() },
+    endpoints: {
+      '/api/profiles': securedProfiles(),
+      '/api/video/downloads/config': {
+        ...(ENDPOINTS['/api/video/downloads/config'] as Dict),
+        anime_path: '/media/anime',
+      },
+    },
     clicks: ['video-seed-idx-refresh'],
   },
   {

@@ -276,8 +276,10 @@ function LibraryRow({
   }, []);
   const idxIds = options.indexer_ids || [];
 
+  // the anime libraries: by the show's type, never a rule, never the default
+  const anime = builtin === 'anime' || builtin === 'anime4k';
   const state =
-    builtin === '4k' && !lib.enabled
+    (builtin === '4k' || builtin === 'anime4k') && !lib.enabled
       ? 'Off: switch it on above'
       : !lib.usable
         ? lib.enabled
@@ -452,25 +454,29 @@ function LibraryRow({
           </label>
         )}
         <div className={s.libGrid}>
-          <label className={s.libField}>
-            <span>Genres that send a title here</span>
-            <LibInput
-              className="video-library-genres"
-              list="video-library-genre-list"
-              defaultValue={terms(rules.genres)}
-              placeholder="Genres, like Documentary, Family"
-              aria-label="Genres that send a title here"
-            />
-          </label>
-          <label className={s.libField}>
-            <span>Keywords that send a title here</span>
-            <LibInput
-              className="video-library-keywords"
-              defaultValue={terms(rules.keywords)}
-              placeholder="Keywords, like stand-up"
-              aria-label="Keywords that send a title here"
-            />
-          </label>
+          {anime ? null : (
+            <>
+              <label className={s.libField}>
+                <span>Genres that send a title here</span>
+                <LibInput
+                  className="video-library-genres"
+                  list="video-library-genre-list"
+                  defaultValue={terms(rules.genres)}
+                  placeholder="Genres, like Documentary, Family"
+                  aria-label="Genres that send a title here"
+                />
+              </label>
+              <label className={s.libField}>
+                <span>Keywords that send a title here</span>
+                <LibInput
+                  className="video-library-keywords"
+                  defaultValue={terms(rules.keywords)}
+                  placeholder="Keywords, like stand-up"
+                  aria-label="Keywords that send a title here"
+                />
+              </label>
+            </>
+          )}
           <label className={s.libField}>
             <span>Quality profile</span>
             <LibSelect
@@ -660,7 +666,7 @@ function LibraryRow({
           <Btn kind="primary" small data-library-action="save" onClick={() => void act('save')}>
             {isNew ? 'Add' : 'Save'}
           </Btn>
-          {!isNew && lib.usable && !lib.is_default ? (
+          {!isNew && lib.usable && !lib.is_default && !anime ? (
             <Btn small data-library-action="default" onClick={() => void act('default')}>
               Make default
             </Btn>
@@ -1280,6 +1286,7 @@ export function VideoFolders({ docker }: { docker: boolean | null }) {
   const open4k = {
     movies: useRef<(() => void) | null>(null),
     tv: useRef<(() => void) | null>(null),
+    anime: useRef<(() => void) | null>(null),
   };
 
   // after each load the folder checks look again
@@ -1292,8 +1299,11 @@ export function VideoFolders({ docker }: { docker: boolean | null }) {
     if (loads) videoServer.ensureServer();
   }, [loads]);
 
-  const fourK = (kind: 'movies' | 'tv') => !!config?.[`${kind}_4k_enabled`];
-  function toggle4k(kind: 'movies' | 'tv', on: boolean) {
+  // Anime 4K is the anime folder's sibling: no anime folder, no Anime 4K
+  const animeSet = !!str(config?.anime_path).trim();
+  const fourK = (kind: 'movies' | 'tv' | 'anime') =>
+    !!config?.[`${kind}_4k_enabled`] && (kind !== 'anime' || animeSet);
+  function toggle4k(kind: 'movies' | 'tv' | 'anime', on: boolean) {
     void videoDownloads.change({ [`${kind}_4k_enabled`]: on });
     refreshChecks('video');
     // nothing to protect yet: open the lock so the folder can be typed
@@ -1398,6 +1408,13 @@ export function VideoFolders({ docker }: { docker: boolean | null }) {
               'Movies 4K library',
             ],
             ['tv', 'Separate 4K TV folder', '/media/tv-4k', '4K TV folder', 'TV 4K library'],
+            [
+              'anime',
+              'Separate 4K anime folder',
+              '/media/anime-4k',
+              '4K anime folder',
+              'Anime 4K library',
+            ],
           ] as const
         ).map(([kind, words, placeholder, aria, label]) => (
           <div key={kind}>
@@ -1407,13 +1424,21 @@ export function VideoFolders({ docker }: { docker: boolean | null }) {
               help={
                 kind === 'movies'
                   ? 'A title files here when its quality profile saves to the 4K library (Quality). Titles you have stay where they are.'
-                  : 'Anime keeps its own folder when one is set, whatever the profile.'
+                  : kind === 'tv'
+                    ? 'Anime keeps its own folders when the anime folder is set: Anime 4K below.'
+                    : 'An anime show files here when its quality profile saves to the 4K library.'
+              }
+              warn={
+                kind === 'anime' && unset('anime_path')
+                  ? 'Set the anime folder above first.'
+                  : undefined
               }
             >
               <Switch
                 id={`video-${kind}-4k-enabled`}
                 data-video-4k-toggle={kind}
                 checked={fourK(kind)}
+                disabled={kind === 'anime' && !animeSet}
                 onChange={(event) => toggle4k(kind, event.target.checked)}
               />
             </Row>
@@ -1445,9 +1470,10 @@ export function VideoFolders({ docker }: { docker: boolean | null }) {
           <VideoLibraries loads={loads} />
         </div>
         <p className={s.cardFoot}>
-          Where a new title goes: the library you pick when you get it, else the 4K one if its
-          quality says so, else the first library whose genres or keywords match, else the default.
-          Titles you already have stay where they are. Each library saves with its own Save.
+          Where a new title goes: the library you pick when you get it, else Anime for an anime show
+          (Anime 4K if its quality says so), else the 4K one if its quality says so, else the first
+          library whose genres or keywords match, else the default. Titles you already have stay
+          where they are. Each library saves with its own Save.
         </p>
       </Card>
 

@@ -45,6 +45,8 @@ export function downloadsBody(c: DownloadsConfig) {
     movies_4k_path: str('movies_4k_path'),
     tv_4k_enabled: !!c.tv_4k_enabled,
     tv_4k_path: str('tv_4k_path'),
+    anime_4k_enabled: !!c.anime_4k_enabled,
+    anime_4k_path: str('anime_4k_path'),
     seed_ratio_goal: num(c.seed_ratio_goal) || 0,
     seed_time_goal_hours: parseInt(asText(c.seed_time_goal_hours), 10) || 0,
     seed_remove_data: c.seed_remove_data !== false,

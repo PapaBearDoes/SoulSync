@@ -14,7 +14,7 @@
     {
       "name": "jellyfin",
       "side": "music",
-      "why": "Jellyfin as the music server (its user and library pickers), and everything a switch elsewhere keeps locked: Spotify tags on, explicit tracks allowed, an admin PIN and password set, the per-indexer seeding rows loaded"
+      "why": "Jellyfin as the music server (its user and library pickers), and everything a switch elsewhere keeps locked: Spotify tags on, explicit tracks allowed, an admin PIN and password set, the per-indexer seeding rows loaded, an anime folder set (its 4K sibling)"
     },
     {
       "name": "navidrome",
@@ -824,7 +824,7 @@
           {
             "method": "POST",
             "url": "/api/video/downloads/config",
-            "body": "{\"download_path\":\"/downloads\",\"movies_path\":\"/media/movies\",\"tv_path\":\"/media/tv\",\"anime_path\":\"\",\"movies_additional_paths\":[\"/media/movies2\"],\"tv_additional_paths\":[],\"youtube_path\":\"/media/youtube\",\"movies_4k_enabled\":true,\"movies_4k_path\":\"/media/movies-4k\",\"tv_4k_enabled\":false,\"tv_4k_path\":\"\",\"seed_ratio_goal\":1.5,\"seed_time_goal_hours\":0,\"seed_remove_data\":true,\"seed_mode\":\"client\",\"seed_overrides\":{},\"usenet_remove_completed\":\"history\",\"redownload_failed\":false}"
+            "body": "{\"download_path\":\"/downloads\",\"movies_path\":\"/media/movies\",\"tv_path\":\"/media/tv\",\"anime_path\":\"\",\"movies_additional_paths\":[\"/media/movies2\"],\"tv_additional_paths\":[],\"youtube_path\":\"/media/youtube\",\"movies_4k_enabled\":true,\"movies_4k_path\":\"/media/movies-4k\",\"tv_4k_enabled\":false,\"tv_4k_path\":\"\",\"anime_4k_enabled\":false,\"anime_4k_path\":\"\",\"seed_ratio_goal\":1.5,\"seed_time_goal_hours\":0,\"seed_remove_data\":true,\"seed_mode\":\"client\",\"seed_overrides\":{},\"usenet_remove_completed\":\"history\",\"redownload_failed\":false}"
           }
         ]
       },
@@ -1892,7 +1892,7 @@
           {
             "method": "POST",
             "url": "/api/video/downloads/config",
-            "body": "{\"download_path\":\"/downloads\",\"movies_path\":\"/media/movies\",\"tv_path\":\"/media/tv\",\"anime_path\":\"\",\"movies_additional_paths\":[\"/media/movies2\"],\"tv_additional_paths\":[],\"youtube_path\":\"/media/youtube\",\"movies_4k_enabled\":true,\"movies_4k_path\":\"/media/movies-4k\",\"tv_4k_enabled\":false,\"tv_4k_path\":\"\",\"seed_ratio_goal\":1.6,\"seed_time_goal_hours\":0,\"seed_remove_data\":true,\"seed_mode\":\"client\",\"seed_overrides\":{},\"usenet_remove_completed\":\"history\",\"redownload_failed\":true}"
+            "body": "{\"download_path\":\"/downloads\",\"movies_path\":\"/media/movies\",\"tv_path\":\"/media/tv\",\"anime_path\":\"\",\"movies_additional_paths\":[\"/media/movies2\"],\"tv_additional_paths\":[],\"youtube_path\":\"/media/youtube\",\"movies_4k_enabled\":true,\"movies_4k_path\":\"/media/movies-4k\",\"tv_4k_enabled\":false,\"tv_4k_path\":\"\",\"anime_4k_enabled\":false,\"anime_4k_path\":\"\",\"seed_ratio_goal\":1.6,\"seed_time_goal_hours\":0,\"seed_remove_data\":true,\"seed_mode\":\"client\",\"seed_overrides\":{},\"usenet_remove_completed\":\"history\",\"redownload_failed\":true}"
           }
         ]
       },
@@ -1911,7 +1911,7 @@
           {
             "method": "POST",
             "url": "/api/video/downloads/config",
-            "body": "{\"download_path\":\"/downloads\",\"movies_path\":\"/media/movies\",\"tv_path\":\"/media/tv\",\"anime_path\":\"\",\"movies_additional_paths\":[\"/media/movies2\"],\"tv_additional_paths\":[],\"youtube_path\":\"/media/youtube\",\"movies_4k_enabled\":true,\"movies_4k_path\":\"/media/movies-4k\",\"tv_4k_enabled\":false,\"tv_4k_path\":\"\",\"seed_ratio_goal\":1.5,\"seed_time_goal_hours\":1,\"seed_remove_data\":true,\"seed_mode\":\"client\",\"seed_overrides\":{},\"usenet_remove_completed\":\"history\",\"redownload_failed\":true}"
+            "body": "{\"download_path\":\"/downloads\",\"movies_path\":\"/media/movies\",\"tv_path\":\"/media/tv\",\"anime_path\":\"\",\"movies_additional_paths\":[\"/media/movies2\"],\"tv_additional_paths\":[],\"youtube_path\":\"/media/youtube\",\"movies_4k_enabled\":true,\"movies_4k_path\":\"/media/movies-4k\",\"tv_4k_enabled\":false,\"tv_4k_path\":\"\",\"anime_4k_enabled\":false,\"anime_4k_path\":\"\",\"seed_ratio_goal\":1.5,\"seed_time_goal_hours\":1,\"seed_remove_data\":true,\"seed_mode\":\"client\",\"seed_overrides\":{},\"usenet_remove_completed\":\"history\",\"redownload_failed\":true}"
           }
         ]
       },
@@ -1930,7 +1930,7 @@
           {
             "method": "POST",
             "url": "/api/video/downloads/config",
-            "body": "{\"download_path\":\"/downloads\",\"movies_path\":\"/media/movies\",\"tv_path\":\"/media/tv\",\"anime_path\":\"\",\"movies_additional_paths\":[\"/media/movies2\"],\"tv_additional_paths\":[],\"youtube_path\":\"/media/youtube\",\"movies_4k_enabled\":true,\"movies_4k_path\":\"/media/movies-4k\",\"tv_4k_enabled\":false,\"tv_4k_path\":\"\",\"seed_ratio_goal\":1.5,\"seed_time_goal_hours\":0,\"seed_remove_data\":false,\"seed_mode\":\"client\",\"seed_overrides\":{},\"usenet_remove_completed\":\"history\",\"redownload_failed\":true}"
+            "body": "{\"download_path\":\"/downloads\",\"movies_path\":\"/media/movies\",\"tv_path\":\"/media/tv\",\"anime_path\":\"\",\"movies_additional_paths\":[\"/media/movies2\"],\"tv_additional_paths\":[],\"youtube_path\":\"/media/youtube\",\"movies_4k_enabled\":true,\"movies_4k_path\":\"/media/movies-4k\",\"tv_4k_enabled\":false,\"tv_4k_path\":\"\",\"anime_4k_enabled\":false,\"anime_4k_path\":\"\",\"seed_ratio_goal\":1.5,\"seed_time_goal_hours\":0,\"seed_remove_data\":false,\"seed_mode\":\"client\",\"seed_overrides\":{},\"usenet_remove_completed\":\"history\",\"redownload_failed\":true}"
           }
         ]
       },
@@ -1949,7 +1949,7 @@
           {
             "method": "POST",
             "url": "/api/video/downloads/config",
-            "body": "{\"download_path\":\"/downloads\",\"movies_path\":\"/media/movies\",\"tv_path\":\"/media/tv\",\"anime_path\":\"\",\"movies_additional_paths\":[\"/media/movies2\"],\"tv_additional_paths\":[],\"youtube_path\":\"/media/youtube\",\"movies_4k_enabled\":true,\"movies_4k_path\":\"/media/movies-4k\",\"tv_4k_enabled\":false,\"tv_4k_path\":\"\",\"seed_ratio_goal\":1.5,\"seed_time_goal_hours\":0,\"seed_remove_data\":true,\"seed_mode\":\"soulsync\",\"seed_overrides\":{},\"usenet_remove_completed\":\"history\",\"redownload_failed\":true}"
+            "body": "{\"download_path\":\"/downloads\",\"movies_path\":\"/media/movies\",\"tv_path\":\"/media/tv\",\"anime_path\":\"\",\"movies_additional_paths\":[\"/media/movies2\"],\"tv_additional_paths\":[],\"youtube_path\":\"/media/youtube\",\"movies_4k_enabled\":true,\"movies_4k_path\":\"/media/movies-4k\",\"tv_4k_enabled\":false,\"tv_4k_path\":\"\",\"anime_4k_enabled\":false,\"anime_4k_path\":\"\",\"seed_ratio_goal\":1.5,\"seed_time_goal_hours\":0,\"seed_remove_data\":true,\"seed_mode\":\"soulsync\",\"seed_overrides\":{},\"usenet_remove_completed\":\"history\",\"redownload_failed\":true}"
           }
         ]
       },
@@ -2104,7 +2104,7 @@
           {
             "method": "POST",
             "url": "/api/video/downloads/config",
-            "body": "{\"download_path\":\"/downloads\",\"movies_path\":\"/media/movies\",\"tv_path\":\"/media/tv\",\"anime_path\":\"\",\"movies_additional_paths\":[\"/media/movies2\"],\"tv_additional_paths\":[],\"youtube_path\":\"/media/youtube\",\"movies_4k_enabled\":true,\"movies_4k_path\":\"/media/movies-4k\",\"tv_4k_enabled\":false,\"tv_4k_path\":\"\",\"seed_ratio_goal\":1.5,\"seed_time_goal_hours\":0,\"seed_remove_data\":true,\"seed_mode\":\"client\",\"seed_overrides\":{},\"usenet_remove_completed\":\"off\",\"redownload_failed\":true}"
+            "body": "{\"download_path\":\"/downloads\",\"movies_path\":\"/media/movies\",\"tv_path\":\"/media/tv\",\"anime_path\":\"\",\"movies_additional_paths\":[\"/media/movies2\"],\"tv_additional_paths\":[],\"youtube_path\":\"/media/youtube\",\"movies_4k_enabled\":true,\"movies_4k_path\":\"/media/movies-4k\",\"tv_4k_enabled\":false,\"tv_4k_path\":\"\",\"anime_4k_enabled\":false,\"anime_4k_path\":\"\",\"seed_ratio_goal\":1.5,\"seed_time_goal_hours\":0,\"seed_remove_data\":true,\"seed_mode\":\"client\",\"seed_overrides\":{},\"usenet_remove_completed\":\"off\",\"redownload_failed\":true}"
           }
         ]
       },
@@ -3564,7 +3564,7 @@
           {
             "method": "POST",
             "url": "/api/video/downloads/config",
-            "body": "{\"download_path\":\"/downloads-guard\",\"movies_path\":\"/media/movies\",\"tv_path\":\"/media/tv\",\"anime_path\":\"\",\"movies_additional_paths\":[\"/media/movies2\"],\"tv_additional_paths\":[],\"youtube_path\":\"/media/youtube\",\"movies_4k_enabled\":true,\"movies_4k_path\":\"/media/movies-4k\",\"tv_4k_enabled\":false,\"tv_4k_path\":\"\",\"seed_ratio_goal\":1.5,\"seed_time_goal_hours\":0,\"seed_remove_data\":true,\"seed_mode\":\"client\",\"seed_overrides\":{},\"usenet_remove_completed\":\"history\",\"redownload_failed\":true}"
+            "body": "{\"download_path\":\"/downloads-guard\",\"movies_path\":\"/media/movies\",\"tv_path\":\"/media/tv\",\"anime_path\":\"\",\"movies_additional_paths\":[\"/media/movies2\"],\"tv_additional_paths\":[],\"youtube_path\":\"/media/youtube\",\"movies_4k_enabled\":true,\"movies_4k_path\":\"/media/movies-4k\",\"tv_4k_enabled\":false,\"tv_4k_path\":\"\",\"anime_4k_enabled\":false,\"anime_4k_path\":\"\",\"seed_ratio_goal\":1.5,\"seed_time_goal_hours\":0,\"seed_remove_data\":true,\"seed_mode\":\"client\",\"seed_overrides\":{},\"usenet_remove_completed\":\"history\",\"redownload_failed\":true}"
           }
         ]
       },
@@ -3642,7 +3642,7 @@
           {
             "method": "POST",
             "url": "/api/video/downloads/config",
-            "body": "{\"download_path\":\"/downloads\",\"movies_path\":\"/media/movies-guard\",\"tv_path\":\"/media/tv\",\"anime_path\":\"\",\"movies_additional_paths\":[\"/media/movies2\"],\"tv_additional_paths\":[],\"youtube_path\":\"/media/youtube\",\"movies_4k_enabled\":true,\"movies_4k_path\":\"/media/movies-4k\",\"tv_4k_enabled\":false,\"tv_4k_path\":\"\",\"seed_ratio_goal\":1.5,\"seed_time_goal_hours\":0,\"seed_remove_data\":true,\"seed_mode\":\"client\",\"seed_overrides\":{},\"usenet_remove_completed\":\"history\",\"redownload_failed\":true}"
+            "body": "{\"download_path\":\"/downloads\",\"movies_path\":\"/media/movies-guard\",\"tv_path\":\"/media/tv\",\"anime_path\":\"\",\"movies_additional_paths\":[\"/media/movies2\"],\"tv_additional_paths\":[],\"youtube_path\":\"/media/youtube\",\"movies_4k_enabled\":true,\"movies_4k_path\":\"/media/movies-4k\",\"tv_4k_enabled\":false,\"tv_4k_path\":\"\",\"anime_4k_enabled\":false,\"anime_4k_path\":\"\",\"seed_ratio_goal\":1.5,\"seed_time_goal_hours\":0,\"seed_remove_data\":true,\"seed_mode\":\"client\",\"seed_overrides\":{},\"usenet_remove_completed\":\"history\",\"redownload_failed\":true}"
           }
         ]
       },
@@ -3662,7 +3662,7 @@
           {
             "method": "POST",
             "url": "/api/video/downloads/config",
-            "body": "{\"download_path\":\"/downloads\",\"movies_path\":\"/media/movies\",\"tv_path\":\"/media/tv-guard\",\"anime_path\":\"\",\"movies_additional_paths\":[\"/media/movies2\"],\"tv_additional_paths\":[],\"youtube_path\":\"/media/youtube\",\"movies_4k_enabled\":true,\"movies_4k_path\":\"/media/movies-4k\",\"tv_4k_enabled\":false,\"tv_4k_path\":\"\",\"seed_ratio_goal\":1.5,\"seed_time_goal_hours\":0,\"seed_remove_data\":true,\"seed_mode\":\"client\",\"seed_overrides\":{},\"usenet_remove_completed\":\"history\",\"redownload_failed\":true}"
+            "body": "{\"download_path\":\"/downloads\",\"movies_path\":\"/media/movies\",\"tv_path\":\"/media/tv-guard\",\"anime_path\":\"\",\"movies_additional_paths\":[\"/media/movies2\"],\"tv_additional_paths\":[],\"youtube_path\":\"/media/youtube\",\"movies_4k_enabled\":true,\"movies_4k_path\":\"/media/movies-4k\",\"tv_4k_enabled\":false,\"tv_4k_path\":\"\",\"anime_4k_enabled\":false,\"anime_4k_path\":\"\",\"seed_ratio_goal\":1.5,\"seed_time_goal_hours\":0,\"seed_remove_data\":true,\"seed_mode\":\"client\",\"seed_overrides\":{},\"usenet_remove_completed\":\"history\",\"redownload_failed\":true}"
           }
         ]
       },
@@ -3682,7 +3682,7 @@
           {
             "method": "POST",
             "url": "/api/video/downloads/config",
-            "body": "{\"download_path\":\"/downloads\",\"movies_path\":\"/media/movies\",\"tv_path\":\"/media/tv\",\"anime_path\":\"guard-probe\",\"movies_additional_paths\":[\"/media/movies2\"],\"tv_additional_paths\":[],\"youtube_path\":\"/media/youtube\",\"movies_4k_enabled\":true,\"movies_4k_path\":\"/media/movies-4k\",\"tv_4k_enabled\":false,\"tv_4k_path\":\"\",\"seed_ratio_goal\":1.5,\"seed_time_goal_hours\":0,\"seed_remove_data\":true,\"seed_mode\":\"client\",\"seed_overrides\":{},\"usenet_remove_completed\":\"history\",\"redownload_failed\":true}"
+            "body": "{\"download_path\":\"/downloads\",\"movies_path\":\"/media/movies\",\"tv_path\":\"/media/tv\",\"anime_path\":\"guard-probe\",\"movies_additional_paths\":[\"/media/movies2\"],\"tv_additional_paths\":[],\"youtube_path\":\"/media/youtube\",\"movies_4k_enabled\":true,\"movies_4k_path\":\"/media/movies-4k\",\"tv_4k_enabled\":false,\"tv_4k_path\":\"\",\"anime_4k_enabled\":false,\"anime_4k_path\":\"\",\"seed_ratio_goal\":1.5,\"seed_time_goal_hours\":0,\"seed_remove_data\":true,\"seed_mode\":\"client\",\"seed_overrides\":{},\"usenet_remove_completed\":\"history\",\"redownload_failed\":true}"
           }
         ]
       },
@@ -3702,7 +3702,7 @@
           {
             "method": "POST",
             "url": "/api/video/downloads/config",
-            "body": "{\"download_path\":\"/downloads\",\"movies_path\":\"/media/movies\",\"tv_path\":\"/media/tv\",\"anime_path\":\"\",\"movies_additional_paths\":[\"/media/movies2\"],\"tv_additional_paths\":[],\"youtube_path\":\"/media/youtube-guard\",\"movies_4k_enabled\":true,\"movies_4k_path\":\"/media/movies-4k\",\"tv_4k_enabled\":false,\"tv_4k_path\":\"\",\"seed_ratio_goal\":1.5,\"seed_time_goal_hours\":0,\"seed_remove_data\":true,\"seed_mode\":\"client\",\"seed_overrides\":{},\"usenet_remove_completed\":\"history\",\"redownload_failed\":true}"
+            "body": "{\"download_path\":\"/downloads\",\"movies_path\":\"/media/movies\",\"tv_path\":\"/media/tv\",\"anime_path\":\"\",\"movies_additional_paths\":[\"/media/movies2\"],\"tv_additional_paths\":[],\"youtube_path\":\"/media/youtube-guard\",\"movies_4k_enabled\":true,\"movies_4k_path\":\"/media/movies-4k\",\"tv_4k_enabled\":false,\"tv_4k_path\":\"\",\"anime_4k_enabled\":false,\"anime_4k_path\":\"\",\"seed_ratio_goal\":1.5,\"seed_time_goal_hours\":0,\"seed_remove_data\":true,\"seed_mode\":\"client\",\"seed_overrides\":{},\"usenet_remove_completed\":\"history\",\"redownload_failed\":true}"
           }
         ]
       },
@@ -3722,7 +3722,7 @@
           {
             "method": "POST",
             "url": "/api/video/downloads/config",
-            "body": "{\"download_path\":\"/downloads\",\"movies_path\":\"/media/movies\",\"tv_path\":\"/media/tv\",\"anime_path\":\"\",\"movies_additional_paths\":[\"/media/movies2\"],\"tv_additional_paths\":[],\"youtube_path\":\"/media/youtube\",\"movies_4k_enabled\":false,\"movies_4k_path\":\"/media/movies-4k\",\"tv_4k_enabled\":false,\"tv_4k_path\":\"\",\"seed_ratio_goal\":1.5,\"seed_time_goal_hours\":0,\"seed_remove_data\":true,\"seed_mode\":\"client\",\"seed_overrides\":{},\"usenet_remove_completed\":\"history\",\"redownload_failed\":true}"
+            "body": "{\"download_path\":\"/downloads\",\"movies_path\":\"/media/movies\",\"tv_path\":\"/media/tv\",\"anime_path\":\"\",\"movies_additional_paths\":[\"/media/movies2\"],\"tv_additional_paths\":[],\"youtube_path\":\"/media/youtube\",\"movies_4k_enabled\":false,\"movies_4k_path\":\"/media/movies-4k\",\"tv_4k_enabled\":false,\"tv_4k_path\":\"\",\"anime_4k_enabled\":false,\"anime_4k_path\":\"\",\"seed_ratio_goal\":1.5,\"seed_time_goal_hours\":0,\"seed_remove_data\":true,\"seed_mode\":\"client\",\"seed_overrides\":{},\"usenet_remove_completed\":\"history\",\"redownload_failed\":true}"
           }
         ]
       },
@@ -3741,7 +3741,7 @@
           {
             "method": "POST",
             "url": "/api/video/downloads/config",
-            "body": "{\"download_path\":\"/downloads\",\"movies_path\":\"/media/movies\",\"tv_path\":\"/media/tv\",\"anime_path\":\"\",\"movies_additional_paths\":[\"/media/movies2\"],\"tv_additional_paths\":[],\"youtube_path\":\"/media/youtube\",\"movies_4k_enabled\":true,\"movies_4k_path\":\"/media/movies-4k-guard\",\"tv_4k_enabled\":false,\"tv_4k_path\":\"\",\"seed_ratio_goal\":1.5,\"seed_time_goal_hours\":0,\"seed_remove_data\":true,\"seed_mode\":\"client\",\"seed_overrides\":{},\"usenet_remove_completed\":\"history\",\"redownload_failed\":true}"
+            "body": "{\"download_path\":\"/downloads\",\"movies_path\":\"/media/movies\",\"tv_path\":\"/media/tv\",\"anime_path\":\"\",\"movies_additional_paths\":[\"/media/movies2\"],\"tv_additional_paths\":[],\"youtube_path\":\"/media/youtube\",\"movies_4k_enabled\":true,\"movies_4k_path\":\"/media/movies-4k-guard\",\"tv_4k_enabled\":false,\"tv_4k_path\":\"\",\"anime_4k_enabled\":false,\"anime_4k_path\":\"\",\"seed_ratio_goal\":1.5,\"seed_time_goal_hours\":0,\"seed_remove_data\":true,\"seed_mode\":\"client\",\"seed_overrides\":{},\"usenet_remove_completed\":\"history\",\"redownload_failed\":true}"
           }
         ]
       },
@@ -3761,7 +3761,7 @@
           {
             "method": "POST",
             "url": "/api/video/downloads/config",
-            "body": "{\"download_path\":\"/downloads\",\"movies_path\":\"/media/movies\",\"tv_path\":\"/media/tv\",\"anime_path\":\"\",\"movies_additional_paths\":[\"/media/movies2\"],\"tv_additional_paths\":[],\"youtube_path\":\"/media/youtube\",\"movies_4k_enabled\":true,\"movies_4k_path\":\"/media/movies-4k\",\"tv_4k_enabled\":true,\"tv_4k_path\":\"\",\"seed_ratio_goal\":1.5,\"seed_time_goal_hours\":0,\"seed_remove_data\":true,\"seed_mode\":\"client\",\"seed_overrides\":{},\"usenet_remove_completed\":\"history\",\"redownload_failed\":true}"
+            "body": "{\"download_path\":\"/downloads\",\"movies_path\":\"/media/movies\",\"tv_path\":\"/media/tv\",\"anime_path\":\"\",\"movies_additional_paths\":[\"/media/movies2\"],\"tv_additional_paths\":[],\"youtube_path\":\"/media/youtube\",\"movies_4k_enabled\":true,\"movies_4k_path\":\"/media/movies-4k\",\"tv_4k_enabled\":true,\"tv_4k_path\":\"\",\"anime_4k_enabled\":false,\"anime_4k_path\":\"\",\"seed_ratio_goal\":1.5,\"seed_time_goal_hours\":0,\"seed_remove_data\":true,\"seed_mode\":\"client\",\"seed_overrides\":{},\"usenet_remove_completed\":\"history\",\"redownload_failed\":true}"
           }
         ]
       },
@@ -3780,7 +3780,46 @@
           {
             "method": "POST",
             "url": "/api/video/downloads/config",
-            "body": "{\"download_path\":\"/downloads\",\"movies_path\":\"/media/movies\",\"tv_path\":\"/media/tv\",\"anime_path\":\"\",\"movies_additional_paths\":[\"/media/movies2\"],\"tv_additional_paths\":[],\"youtube_path\":\"/media/youtube\",\"movies_4k_enabled\":true,\"movies_4k_path\":\"/media/movies-4k\",\"tv_4k_enabled\":false,\"tv_4k_path\":\"guard-probe\",\"seed_ratio_goal\":1.5,\"seed_time_goal_hours\":0,\"seed_remove_data\":true,\"seed_mode\":\"client\",\"seed_overrides\":{},\"usenet_remove_completed\":\"history\",\"redownload_failed\":true}"
+            "body": "{\"download_path\":\"/downloads\",\"movies_path\":\"/media/movies\",\"tv_path\":\"/media/tv\",\"anime_path\":\"\",\"movies_additional_paths\":[\"/media/movies2\"],\"tv_additional_paths\":[],\"youtube_path\":\"/media/youtube\",\"movies_4k_enabled\":true,\"movies_4k_path\":\"/media/movies-4k\",\"tv_4k_enabled\":false,\"tv_4k_path\":\"guard-probe\",\"anime_4k_enabled\":false,\"anime_4k_path\":\"\",\"seed_ratio_goal\":1.5,\"seed_time_goal_hours\":0,\"seed_remove_data\":true,\"seed_mode\":\"client\",\"seed_overrides\":{},\"usenet_remove_completed\":\"history\",\"redownload_failed\":true}"
+          }
+        ]
+      },
+      "before": ["Unlock"],
+      "asked": "guard-probe",
+      "showsEndpoint": "/api/video/downloads/config"
+    },
+    "#video-anime-4k-enabled": {
+      "sel": "#video-anime-4k-enabled",
+      "kind": "checkbox",
+      "sides": ["music", "video"],
+      "scenario": "jellyfin",
+      "from": false,
+      "to": true,
+      "saves": {
+        "requests": [
+          {
+            "method": "POST",
+            "url": "/api/video/downloads/config",
+            "body": "{\"download_path\":\"/downloads\",\"movies_path\":\"/media/movies\",\"tv_path\":\"/media/tv\",\"anime_path\":\"/media/anime\",\"movies_additional_paths\":[\"/media/movies2\"],\"tv_additional_paths\":[],\"youtube_path\":\"/media/youtube\",\"movies_4k_enabled\":true,\"movies_4k_path\":\"/media/movies-4k\",\"tv_4k_enabled\":false,\"tv_4k_path\":\"\",\"anime_4k_enabled\":true,\"anime_4k_path\":\"\",\"seed_ratio_goal\":1.5,\"seed_time_goal_hours\":0,\"seed_remove_data\":true,\"seed_mode\":\"client\",\"seed_overrides\":{},\"usenet_remove_completed\":\"history\",\"redownload_failed\":true}"
+          }
+        ]
+      },
+      "asked": true,
+      "showsEndpoint": "/api/video/downloads/config"
+    },
+    "#video-anime-4k-path": {
+      "sel": "#video-anime-4k-path",
+      "kind": "text",
+      "sides": ["music", "video"],
+      "scenario": "music",
+      "from": "",
+      "to": "guard-probe",
+      "saves": {
+        "requests": [
+          {
+            "method": "POST",
+            "url": "/api/video/downloads/config",
+            "body": "{\"download_path\":\"/downloads\",\"movies_path\":\"/media/movies\",\"tv_path\":\"/media/tv\",\"anime_path\":\"\",\"movies_additional_paths\":[\"/media/movies2\"],\"tv_additional_paths\":[],\"youtube_path\":\"/media/youtube\",\"movies_4k_enabled\":true,\"movies_4k_path\":\"/media/movies-4k\",\"tv_4k_enabled\":false,\"tv_4k_path\":\"\",\"anime_4k_enabled\":false,\"anime_4k_path\":\"guard-probe\",\"seed_ratio_goal\":1.5,\"seed_time_goal_hours\":0,\"seed_remove_data\":true,\"seed_mode\":\"client\",\"seed_overrides\":{},\"usenet_remove_completed\":\"history\",\"redownload_failed\":true}"
           }
         ]
       },
@@ -4616,7 +4655,7 @@
           {
             "method": "POST",
             "url": "/api/video/downloads/config",
-            "body": "{\"download_path\":\"/downloads\",\"movies_path\":\"/media/movies\",\"tv_path\":\"/media/tv\",\"anime_path\":\"\",\"movies_additional_paths\":[\"/media/movies2-guard\"],\"tv_additional_paths\":[],\"youtube_path\":\"/media/youtube\",\"movies_4k_enabled\":true,\"movies_4k_path\":\"/media/movies-4k\",\"tv_4k_enabled\":false,\"tv_4k_path\":\"\",\"seed_ratio_goal\":1.5,\"seed_time_goal_hours\":0,\"seed_remove_data\":true,\"seed_mode\":\"client\",\"seed_overrides\":{},\"usenet_remove_completed\":\"history\",\"redownload_failed\":true}"
+            "body": "{\"download_path\":\"/downloads\",\"movies_path\":\"/media/movies\",\"tv_path\":\"/media/tv\",\"anime_path\":\"\",\"movies_additional_paths\":[\"/media/movies2-guard\"],\"tv_additional_paths\":[],\"youtube_path\":\"/media/youtube\",\"movies_4k_enabled\":true,\"movies_4k_path\":\"/media/movies-4k\",\"tv_4k_enabled\":false,\"tv_4k_path\":\"\",\"anime_4k_enabled\":false,\"anime_4k_path\":\"\",\"seed_ratio_goal\":1.5,\"seed_time_goal_hours\":0,\"seed_remove_data\":true,\"seed_mode\":\"client\",\"seed_overrides\":{},\"usenet_remove_completed\":\"history\",\"redownload_failed\":true}"
           }
         ]
       },
@@ -11457,7 +11496,7 @@
           {
             "method": "POST",
             "url": "/api/video/downloads/config",
-            "body": "{\"download_path\":\"/downloads\",\"movies_path\":\"/media/movies\",\"tv_path\":\"/media/tv\",\"anime_path\":\"\",\"movies_additional_paths\":[\"/media/movies2\"],\"tv_additional_paths\":[],\"youtube_path\":\"/media/youtube\",\"movies_4k_enabled\":true,\"movies_4k_path\":\"/media/movies-4k\",\"tv_4k_enabled\":false,\"tv_4k_path\":\"\",\"seed_ratio_goal\":1.5,\"seed_time_goal_hours\":0,\"seed_remove_data\":true,\"seed_mode\":\"client\",\"seed_overrides\":{\"3\":{\"ratio\":0.1}},\"usenet_remove_completed\":\"history\",\"redownload_failed\":true}"
+            "body": "{\"download_path\":\"/downloads\",\"movies_path\":\"/media/movies\",\"tv_path\":\"/media/tv\",\"anime_path\":\"/media/anime\",\"movies_additional_paths\":[\"/media/movies2\"],\"tv_additional_paths\":[],\"youtube_path\":\"/media/youtube\",\"movies_4k_enabled\":true,\"movies_4k_path\":\"/media/movies-4k\",\"tv_4k_enabled\":false,\"tv_4k_path\":\"\",\"anime_4k_enabled\":false,\"anime_4k_path\":\"\",\"seed_ratio_goal\":1.5,\"seed_time_goal_hours\":0,\"seed_remove_data\":true,\"seed_mode\":\"client\",\"seed_overrides\":{\"3\":{\"ratio\":0.1}},\"usenet_remove_completed\":\"history\",\"redownload_failed\":true}"
           }
         ]
       },
@@ -11476,7 +11515,7 @@
           {
             "method": "POST",
             "url": "/api/video/downloads/config",
-            "body": "{\"download_path\":\"/downloads\",\"movies_path\":\"/media/movies\",\"tv_path\":\"/media/tv\",\"anime_path\":\"\",\"movies_additional_paths\":[\"/media/movies2\"],\"tv_additional_paths\":[],\"youtube_path\":\"/media/youtube\",\"movies_4k_enabled\":true,\"movies_4k_path\":\"/media/movies-4k\",\"tv_4k_enabled\":false,\"tv_4k_path\":\"\",\"seed_ratio_goal\":1.5,\"seed_time_goal_hours\":0,\"seed_remove_data\":true,\"seed_mode\":\"client\",\"seed_overrides\":{\"3\":{\"hours\":1}},\"usenet_remove_completed\":\"history\",\"redownload_failed\":true}"
+            "body": "{\"download_path\":\"/downloads\",\"movies_path\":\"/media/movies\",\"tv_path\":\"/media/tv\",\"anime_path\":\"/media/anime\",\"movies_additional_paths\":[\"/media/movies2\"],\"tv_additional_paths\":[],\"youtube_path\":\"/media/youtube\",\"movies_4k_enabled\":true,\"movies_4k_path\":\"/media/movies-4k\",\"tv_4k_enabled\":false,\"tv_4k_path\":\"\",\"anime_4k_enabled\":false,\"anime_4k_path\":\"\",\"seed_ratio_goal\":1.5,\"seed_time_goal_hours\":0,\"seed_remove_data\":true,\"seed_mode\":\"client\",\"seed_overrides\":{\"3\":{\"hours\":1}},\"usenet_remove_completed\":\"history\",\"redownload_failed\":true}"
           }
         ]
       },
@@ -11495,7 +11534,7 @@
           {
             "method": "POST",
             "url": "/api/video/downloads/config",
-            "body": "{\"download_path\":\"/downloads\",\"movies_path\":\"/media/movies\",\"tv_path\":\"/media/tv\",\"anime_path\":\"\",\"movies_additional_paths\":[\"/media/movies2\"],\"tv_additional_paths\":[],\"youtube_path\":\"/media/youtube\",\"movies_4k_enabled\":true,\"movies_4k_path\":\"/media/movies-4k\",\"tv_4k_enabled\":false,\"tv_4k_path\":\"\",\"seed_ratio_goal\":1.5,\"seed_time_goal_hours\":0,\"seed_remove_data\":true,\"seed_mode\":\"client\",\"seed_overrides\":{\"3\":{\"pack_hours\":1}},\"usenet_remove_completed\":\"history\",\"redownload_failed\":true}"
+            "body": "{\"download_path\":\"/downloads\",\"movies_path\":\"/media/movies\",\"tv_path\":\"/media/tv\",\"anime_path\":\"/media/anime\",\"movies_additional_paths\":[\"/media/movies2\"],\"tv_additional_paths\":[],\"youtube_path\":\"/media/youtube\",\"movies_4k_enabled\":true,\"movies_4k_path\":\"/media/movies-4k\",\"tv_4k_enabled\":false,\"tv_4k_path\":\"\",\"anime_4k_enabled\":false,\"anime_4k_path\":\"\",\"seed_ratio_goal\":1.5,\"seed_time_goal_hours\":0,\"seed_remove_data\":true,\"seed_mode\":\"client\",\"seed_overrides\":{\"3\":{\"pack_hours\":1}},\"usenet_remove_completed\":\"history\",\"redownload_failed\":true}"
           }
         ]
       },
@@ -13821,7 +13860,7 @@
     "#folders-video-panel \"Unlock\"": {
       "label": "Unlock",
       "anchor": "folders-video-panel",
-      "count": 8,
+      "count": 9,
       "sides": ["music", "video"],
       "scenario": "music"
     },

@@ -936,7 +936,7 @@ export const SETTINGS_ENTRIES: SettingsEntry[] = entries([
     anchor: heading('4K libraries'),
     file: 'library-video-folders.tsx',
     hint: 'a second copy in 4K',
-    keywords: '4k uhd 2160p library',
+    keywords: '4k uhd 2160p library anime',
   },
   {
     label: 'Extra video folders',

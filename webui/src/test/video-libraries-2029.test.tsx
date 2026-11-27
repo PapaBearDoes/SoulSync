@@ -56,11 +56,11 @@ const LIBRARIES = [
   },
 ];
 
-function setup() {
+function setup(libraries: unknown[] = LIBRARIES) {
   const fetcher = vi.fn(async (url: string, init?: RequestInit) => {
     const body = (v: unknown) => new Response(JSON.stringify(v));
     if (url === '/api/video/libraries/folders' && !init?.method) {
-      return body({ libraries: LIBRARIES, genres: ['Comedy', 'Documentary'] });
+      return body({ libraries, genres: ['Comedy', 'Documentary'] });
     }
     if (url.startsWith('/api/video/libraries/folders')) return body({ success: true });
     if (url.includes('/quality/profiles')) {
@@ -209,6 +209,73 @@ describe('settings: more libraries', () => {
         true,
       ),
     );
+  });
+});
+
+describe('settings: the anime libraries', () => {
+  const ANIME = [
+    {
+      id: 3,
+      kind: 'show',
+      name: 'TV',
+      path: '/tv',
+      builtin: 'main',
+      enabled: true,
+      usable: true,
+      is_default: true,
+      rules: { genres: [], keywords: [] },
+    },
+    {
+      id: 6,
+      kind: 'show',
+      name: 'Anime',
+      path: '/anime',
+      builtin: 'anime',
+      enabled: true,
+      usable: true,
+      is_default: false,
+      rules: { genres: [], keywords: [] },
+    },
+    {
+      id: 7,
+      kind: 'show',
+      name: 'Anime 4K',
+      path: '/anime-4k',
+      builtin: 'anime4k',
+      enabled: false,
+      usable: false,
+      is_default: false,
+      rules: { genres: [], keywords: [] },
+    },
+  ];
+
+  it('have no rules, no Make default and no remove; Anime 4K is off like a 4K one', async () => {
+    const { doc, fetcher } = setup(ANIME);
+    await waitFor(() => expect(doc.querySelectorAll('.video-library-row').length).toBe(3));
+    const [tv, anime, anime4k] = Array.from(doc.querySelectorAll('.video-library-row'));
+    // TV keeps its rules
+    expect(tv.querySelector('.video-library-genres')).not.toBeNull();
+    for (const row of [anime, anime4k]) {
+      expect(row.querySelector('.video-library-genres')).toBeNull();
+      expect(row.querySelector('.video-library-keywords')).toBeNull();
+      expect(row.querySelector('[data-library-action="remove"]')).toBeNull();
+      expect(row.querySelector('[data-library-action="default"]')).toBeNull();
+      expect(row.querySelector('.video-library-profile')).not.toBeNull();
+    }
+    expect(anime.querySelector('.video-library-known')!.textContent).toContain('/anime');
+    expect(anime4k.querySelector('.video-library-state')!.textContent).toContain(
+      'switch it on above',
+    );
+    // saved with its other settings and no rules
+    (anime.querySelector('.video-library-tcat') as HTMLInputElement).value = 'anime';
+    click(anime.querySelector('[data-library-action="save"]'));
+    const put = calls(fetcher).find((c) => c[1]?.method === 'PUT');
+    expect(put![0]).toBe('/api/video/libraries/folders/6');
+    expect(JSON.parse(put![1]!.body as string)).toMatchObject({
+      name: 'Anime',
+      rules: { genres: [], keywords: [] },
+      torrent_category: 'anime',
+    });
   });
 });
 

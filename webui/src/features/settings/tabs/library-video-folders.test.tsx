@@ -182,6 +182,8 @@ describe('the folders', () => {
       movies_4k_path: '/movies-4k',
       tv_4k_enabled: false,
       tv_4k_path: '/tv-4k',
+      anime_4k_enabled: false,
+      anime_4k_path: '',
       seed_ratio_goal: 1.5,
       seed_time_goal_hours: 0,
       seed_remove_data: true,
@@ -274,7 +276,16 @@ describe('the folders', () => {
   it('every folder is locked; a 4K switch with no folder yet opens its lock', async () => {
     answers['GET /api/video/downloads/config'] = { ...CONFIG, tv_4k_path: '' };
     panel();
-    for (const id of ['download', 'movies', 'tv', 'anime', 'youtube', 'movies-4k', 'tv-4k']) {
+    for (const id of [
+      'download',
+      'movies',
+      'tv',
+      'anime',
+      'youtube',
+      'movies-4k',
+      'tv-4k',
+      'anime-4k',
+    ]) {
       expect(el(`video-${id}-path`).readOnly).toBe(true);
       expect(lockOf(`video-${id}-path`).textContent).toBe('Unlock');
     }
@@ -282,6 +293,38 @@ describe('the folders', () => {
     fireEvent.click(el('video-tv-4k-enabled'));
     expect(el('video-tv-4k-path').readOnly).toBe(false);
     expect(lockOf('video-tv-4k-path').textContent).toBe('Lock');
+  });
+
+  it('Anime 4K needs the anime folder: greyed without it, a 4K switch with it', async () => {
+    answers['GET /api/video/downloads/config'] = {
+      ...CONFIG,
+      anime_path: '',
+      anime_4k_enabled: true,
+      anime_4k_path: '/anime-4k',
+    };
+    panel();
+    await shown();
+    const row = () => document.querySelector<HTMLElement>('[data-video-4k-row="anime"]')!;
+    // switched on with a folder, but no anime folder: off, and can't be switched
+    expect(el('video-anime-4k-enabled').checked).toBe(false);
+    expect(el('video-anime-4k-enabled').disabled).toBe(true);
+    expect(row().hidden).toBe(true);
+    expect(el('video-anime-4k-enabled').closest('[data-row]')!.textContent).toContain(
+      'Set the anime folder above first.',
+    );
+    typeAndLeave(el('video-anime-path'), '/anime');
+    await waitFor(() => expect(el('video-anime-4k-enabled').disabled).toBe(false));
+    expect(el('video-anime-4k-enabled').checked).toBe(true);
+    expect(row().hidden).toBe(false);
+    fireEvent.click(el('video-anime-4k-enabled'));
+    await waitFor(() =>
+      expect(posts().at(-1)).toMatchObject({
+        anime_path: '/anime',
+        anime_4k_enabled: false,
+        anime_4k_path: '/anime-4k',
+      }),
+    );
+    expect(row().hidden).toBe(true);
   });
 
   it('lists a Docker volume line for each folder that is set', async () => {
