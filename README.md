@@ -1074,7 +1074,7 @@ Settings save as you change them. If you'd rather press save yourself, turn off 
 | Music videos | `/app/MusicVideos` | Optional |
 | Podcasts / audiobooks | `/app/podcasts`, `/app/audiobooks` | Optional |
 | Video | `/media/movies`, `/media/tv`, `/media/youtube` | Optional, for the video side |
-| Video extras | `/media/anime`, `/media/movies-4k`, `/media/tv-4k` | Optional: the anime and 4K libraries, commented out in the compose file |
+| Video extras | `/media/anime`, `/media/movies-4k`, `/media/tv-4k`, `/media/anime-4k` | Optional: the anime and 4K libraries, commented out in the compose file |
 
 If your media server keeps music on more drives than SoulSync's library folder, mount those into SoulSync too and add them as library folders. **Settings → Library → Folders → Music → Your media server's folders** lists every folder the server uses and which ones SoulSync can't read yet.
 

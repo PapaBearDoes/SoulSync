@@ -163,7 +163,7 @@ The video side keeps its own library paths, migrated from the legacy single vide
 - \`tv_path\` — where finished TV downloads are organized
 - \`anime_path\` — optional: where finished episodes of anime-type shows are organized instead of \`tv_path\` (empty = anime goes to \`tv_path\`)
 - \`youtube_path\` — where YouTube channel downloads land
-- \`movies_4k_path\` / \`tv_4k_path\` — optional 4K libraries, each off until its switch is on (\`movies_4k_enabled\` / \`tv_4k_enabled\`)
+- \`movies_4k_path\` / \`tv_4k_path\` / \`anime_4k_path\` — optional 4K libraries, each off until its switch is on (\`movies_4k_enabled\` / \`tv_4k_enabled\` / \`anime_4k_enabled\`); the anime one also needs \`anime_path\`
 
 The engine routes each finished download to the library path matching its type.
 
@@ -181,27 +181,28 @@ Plex and Jellyfin report every file at the path *they* see it under, like \`/mnt
 
 ## 4K libraries
 
-To keep 4K copies apart, like a separate **Movies 4K** library in Plex, switch on **Separate 4K movies folder** and / or **Separate 4K TV folder** under Settings > Library > Folders (Video) > 4K libraries and give each a folder. Then set **Save to: 4K library** on the [quality profile](#vdl-quality) those titles use.
+To keep 4K copies apart, like a separate **Movies 4K** library in Plex, switch on **Separate 4K movies folder**, **Separate 4K TV folder** and / or **Separate 4K anime folder** under Settings > Library > Folders (Video) > 4K libraries and give each a folder. Then set **Save to: 4K library** on the [quality profile](#vdl-quality) those titles use.
 
 - New grabs of a title on that profile file into the 4K folder, from the wishlist, RSS sync, a manual grab or a manual import.
 - Titles you already have stay where they are, and their upgrades land beside the copy you have, so changing a profile never duplicates a title.
-- Anime keeps its own folder when one is set, whatever the profile: that one is by type, the 4K one by quality.
+- Anime keeps its own folders when the anime folder is set: an anime show on a 4K profile files into the 4K anime folder when it's on, else the anime folder, never TV 4K. The 4K anime folder needs the anime folder; without one, anime files like any other show.
 - Switch a 4K folder off and it's ignored everywhere (routing, scans, health checks). Its path is kept for next time.
 
-In Docker, map each 4K folder in your compose file (the default compose has commented \`/media/movies-4k\` and \`/media/tv-4k\` lines) and add it to a library on your media server. See [Video: Downloads](#video-downloads) for the full pipeline.
+In Docker, map each 4K folder in your compose file (the default compose has commented \`/media/movies-4k\`, \`/media/tv-4k\` and \`/media/anime-4k\` lines) and add it to a library on your media server. See [Video: Downloads](#video-downloads) for the full pipeline.
 
 ## More libraries
 
-Add your own movie and TV libraries, like a **Stand-Up**, **Documentaries** or **Kids** library in Plex, under Settings > Library > Folders (Video) > More libraries. Each has a name, its own folder and optional rules. The main and 4K libraries are listed there too (their folders are the ones set above), so an install with no extra library works exactly as before.
+Add your own movie and TV libraries, like a **Stand-Up**, **Documentaries** or **Kids** library in Plex, under Settings > Library > Folders (Video) > More libraries. Each has a name, its own folder and optional rules. The main, 4K and anime libraries are listed there too (their folders are the ones set above), so an install with no extra library works exactly as before.
 
 A new title files into, first match wins:
 
 1. the library picked for it: the **Library** picker in **Get** / **Manual search** (shown once a kind has two libraries), which sticks to the title
-2. the 4K library, when its quality profile saves to 4K
-3. the first library whose **rules** match: a **genre** (TMDB's, like Documentary or Family) or a **keyword** (found inside one of the title's TMDB keywords, like stand-up comedy, or in its name)
-4. the **default** library for its kind (**Make default** on a library)
+2. **Anime** for an anime show (by its type: set by hand, in a library marked anime, or TMDB's suggestion for a show not in your library; never its genre), or **Anime 4K** when its quality profile saves to 4K and the 4K anime folder is on
+3. the 4K library, when its quality profile saves to 4K
+4. the first library whose **rules** match: a **genre** (TMDB's, like Documentary or Family) or a **keyword** (found inside one of the title's TMDB keywords, like stand-up comedy, or in its name)
+5. the **default** library for its kind (**Make default** on a library)
 
-- Anime shows keep the anime folder unless a library was picked for them.
+- **Anime** and **Anime 4K** take anime shows only: they have no rules and can't be the default. Everything else on their cards is their own (quality profile, download sources, categories, indexers, automatic search, upgrades, chapter pictures and skip markers), so anime can search its own trackers and land under its own client category. Each starts, the first time it has a folder, with the settings anime was using until then: the TV default library's for Anime, TV 4K's for Anime 4K.
 - Titles you already have stay where they are, and their upgrades land beside the copy you have.
 - A library that's switched off or has no folder is skipped everywhere; **Remove** keeps its folder and files, and titles picked for it go back to the rules and the default.
 - A library's folder is a library folder like the main ones: scans, health checks and the download monitor know it. Map it in Docker and add it to a library on your media server.

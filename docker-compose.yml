@@ -109,6 +109,7 @@ services:
       # here, like a separate "Movies 4K" library in Plex. Uncomment to use:
       # - ./Movies-4K:/media/movies-4k
       # - ./TV-4K:/media/tv-4k
+      # - ./Anime-4K:/media/anime-4k
       # Multiple movie / TV drives: give EVERY mount a UNIQUE container path.
       # Mounts do not merge: do NOT bind several drives to /media/movies or /media/tv.
       # Replace the host paths below with your real folders, then uncomment:
